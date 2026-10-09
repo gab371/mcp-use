@@ -554,6 +554,7 @@ function ViewRendererBase({
           bridge.oncalltool = (async ({
             name,
             arguments: args,
+            _meta,
           }: CallToolRequest["params"]) => {
             const conn = connectionRef.current;
             if (!conn) throw new Error("Server connection not available");
@@ -563,6 +564,7 @@ function ViewRendererBase({
             return await conn.callTool(name, args || {}, {
               timeout: toolCallTimeout,
               resetTimeoutOnProgress: true,
+              ...(_meta ? { _meta } : {}), // fork: feat 01 forward widget _meta to tool call
             });
           }) as typeof bridge.oncalltool;
         }

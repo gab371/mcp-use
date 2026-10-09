@@ -13,6 +13,7 @@ import {
   type PendingToolExecution,
 } from "./tool-auth-retry";
 import { mergeToolMetadata } from "./tool-metadata";
+import { useHostProfile } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
 
 type ToolExecutionRequest = Omit<PendingToolExecution, "serverId">;
 
@@ -52,6 +53,7 @@ export function useToolExecution({
       timeout?: number;
       resetTimeoutOnProgress?: boolean;
       signal?: AbortSignal;
+      _meta?: Record<string, unknown>; // fork: feat 01 tool call _meta option
     }
   ) => Promise<unknown>;
   readResource: (uri: string) => Promise<unknown>;
@@ -60,6 +62,7 @@ export function useToolExecution({
   authenticate?: () => Promise<void>;
   isAuthenticating?: boolean;
 }) {
+  const { getToolCallMeta } = useHostProfile(); // fork: feat 01 read host profile tool call metadata
   const [pendingAuthorization, setPendingAuthorization] =
     useState<PendingToolExecution | null>(() =>
       readPendingToolExecution(serverId)
@@ -110,10 +113,12 @@ export function useToolExecution({
           ]);
         }
 
+        const injectedMeta = getToolCallMeta(); // fork: feat 01 inject active host profile client _meta into tool call
         const result = await callTool(request.toolName, request.args, {
           timeout: 600000,
           resetTimeoutOnProgress: true,
           signal: controller.signal,
+          ...(injectedMeta ? { _meta: injectedMeta } : {}), // fork: feat 01 inject active host profile client _meta into tool call
         });
         const duration = Date.now() - startTime;
         const updatedToolMeta = mergeToolMetadata(
@@ -218,7 +223,7 @@ export function useToolExecution({
         }
       }
     },
-    [callTool, readResource, serverId]
+    [callTool, readResource, serverId, getToolCallMeta] // fork: feat 01 add getToolCallMeta dependency
   );
 
   const executeTool = useCallback(async () => {

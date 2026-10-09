@@ -711,8 +711,19 @@ export abstract class BaseConnector {
     }
 
     logger.debug(`Calling tool '${name}' with args`, args);
+    const callParams: {
+      name: string;
+      arguments: Record<string, any>;
+      _meta?: Record<string, any>;
+    } = {
+      name,
+      arguments: args,
+    };
+    if ((options as any)?._meta) { // fork: feat 01 forward _meta from options to client.callTool
+      callParams._meta = (options as any)._meta;
+    }
     const res = await this.executeRequest(() =>
-      this.client!.callTool({ name, arguments: args }, enhancedOptions)
+      this.client!.callTool(callParams, enhancedOptions)
     );
     logger.debug(`Tool '${name}' returned`, res);
     return res as CallToolResult;

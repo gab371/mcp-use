@@ -24,6 +24,28 @@ export interface HostProfile {
   };
   /** Inject the ChatGPT Apps SDK `window.openai` shim. */
   openaiShim: boolean;
+  /** Metadata injected into client tool calls (params._meta), as specified by ChatGPT / webplus. */
+  clientToolCallMeta?: HostProfileClientMeta;
   /** Capture file the values come from, e.g. `captures/chatgpt-2026-10-07.json`. */
   source: string;
+}
+
+export interface HostProfileUserLocation {
+  city?: string;
+  region?: string;
+  country?: string;
+  timezone?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface HostProfileClientMeta {
+  "openai/locale"?: string;
+  "webplus/i18n"?: string;
+  "openai/userAgent"?: string;
+  "openai/userLocation"?: HostProfileUserLocation;
+  "openai/subject"?: string;
+  "openai/session"?: string;
+  "openai/organization"?: string;
+  [key: string]: unknown;
 }

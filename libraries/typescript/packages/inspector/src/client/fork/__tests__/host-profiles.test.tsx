@@ -10,11 +10,13 @@ import {
   createChatGptProfile,
   createClaudeDesktopProfile,
   getHostProfile,
+  DEFAULT_CHATGPT_CLIENT_META,
 } from "../host-profiles/built-ins";
 import {
   HostProfileProvider,
   useHostProfile,
 } from "../host-profiles/HostProfileContext";
+import { HostProfileMetaBar } from "../host-profiles/HostProfileMetaBar";
 import { useMcpAppsHostContext } from "../../hooks/useMcpAppsHostContext";
 
 const mockLocalStorage = (() => {
@@ -382,5 +384,142 @@ describe("useMcpAppsHostContext with host profiles", () => {
 
     expect(captured!.activeProfileId).toBe("claude");
     window.location = originalLocation;
+  });
+
+  describe("Client Tool Call Metadata (_meta fields)", () => {
+    it("DEFAULT_CHATGPT_CLIENT_META includes all OpenAI client metadata fields", () => {
+      expect(DEFAULT_CHATGPT_CLIENT_META["openai/locale"]).toBe("en-US");
+      expect(DEFAULT_CHATGPT_CLIENT_META["webplus/i18n"]).toBe("en-US");
+      expect(DEFAULT_CHATGPT_CLIENT_META["openai/userAgent"]).toContain("ChatGPT");
+      expect(DEFAULT_CHATGPT_CLIENT_META["openai/userLocation"]).toEqual({
+        city: "San Francisco",
+        region: "CA",
+        country: "US",
+        timezone: "America/Los_Angeles",
+        latitude: 37.7749,
+        longitude: -122.4194,
+      });
+      expect(DEFAULT_CHATGPT_CLIENT_META["openai/subject"]).toBeDefined();
+      expect(DEFAULT_CHATGPT_CLIENT_META["openai/session"]).toBeDefined();
+      expect(DEFAULT_CHATGPT_CLIENT_META["openai/organization"]).toBeDefined();
+    });
+
+    it("attaches clientToolCallMeta to ChatGPT profile and leaves it undefined for others", () => {
+      const chatgpt = createChatGptProfile();
+      expect(chatgpt.clientToolCallMeta).toEqual(DEFAULT_CHATGPT_CLIENT_META);
+
+      const claude = createClaudeProfile();
+      expect(claude.clientToolCallMeta).toBeUndefined();
+
+      const mcpUse = createMcpUseProfile();
+      expect(mcpUse.clientToolCallMeta).toBeUndefined();
+
+      const claudeDesktop = createClaudeDesktopProfile();
+      expect(claudeDesktop.clientToolCallMeta).toBeUndefined();
+    });
+
+    it("provides getToolCallMeta returning ChatGPT defaults when chatgpt is active", () => {
+      let captured: ReturnType<typeof useHostProfile> | null = null;
+      function Probe() {
+        captured = useHostProfile();
+        return null;
+      }
+
+      act(() => {
+        root!.render(
+          <HostProfileProvider initialProfileId="chatgpt">
+            <Probe />
+          </HostProfileProvider>
+        );
+      });
+
+      expect(captured!.getToolCallMeta()).toEqual(DEFAULT_CHATGPT_CLIENT_META);
+    });
+
+    it("returns undefined for getToolCallMeta when claude or mcp-use is active", () => {
+      let captured: ReturnType<typeof useHostProfile> | null = null;
+      function Probe() {
+        captured = useHostProfile();
+        return null;
+      }
+
+      act(() => {
+        root!.render(
+          <HostProfileProvider initialProfileId="claude">
+            <Probe />
+          </HostProfileProvider>
+        );
+      });
+
+      expect(captured!.getToolCallMeta()).toBeUndefined();
+    });
+
+    it("supports updating client metadata and toggling userLocation on/off", () => {
+      let captured: ReturnType<typeof useHostProfile> | null = null;
+      function Probe() {
+        captured = useHostProfile();
+        return null;
+      }
+
+      act(() => {
+        root!.render(
+          <HostProfileProvider initialProfileId="chatgpt">
+            <Probe />
+          </HostProfileProvider>
+        );
+      });
+
+      // Update locale
+      act(() => {
+        captured!.updateClientToolCallMeta({
+          "openai/locale": "fr-FR",
+        });
+      });
+
+      const updated = captured!.getToolCallMeta();
+      expect(updated!["openai/locale"]).toBe("fr-FR");
+      expect(updated!["webplus/i18n"]).toBe("fr-FR");
+
+      // Toggle location off
+      act(() => {
+        captured!.setLocationEnabled(false);
+      });
+
+      const withoutLocation = captured!.getToolCallMeta();
+      expect(withoutLocation!["openai/userLocation"]).toBeUndefined();
+      expect(withoutLocation!["openai/locale"]).toBe("fr-FR");
+
+      // Reset defaults
+      act(() => {
+        captured!.resetClientToolCallMeta();
+      });
+
+      const restored = captured!.getToolCallMeta();
+      expect(restored).toEqual(DEFAULT_CHATGPT_CLIENT_META);
+    });
+
+    it("renders HostProfileMetaBar when chatgpt profile is active and hides it for claude", () => {
+      act(() => {
+        root!.render(
+          <HostProfileProvider key="chatgpt" initialProfileId="chatgpt">
+            <HostProfileMetaBar />
+          </HostProfileProvider>
+        );
+      });
+
+      expect(container!.querySelector('[data-testid="host-profile-meta-bar"]')).not.toBeNull();
+      expect(container!.textContent).toContain("ChatGPT (Apps) Client Metadata");
+      expect(container!.textContent).toContain("_meta");
+
+      act(() => {
+        root!.render(
+          <HostProfileProvider key="claude" initialProfileId="claude">
+            <HostProfileMetaBar />
+          </HostProfileProvider>
+        );
+      });
+
+      expect(container!.querySelector('[data-testid="host-profile-meta-bar"]')).toBeNull();
+    });
   });
 });

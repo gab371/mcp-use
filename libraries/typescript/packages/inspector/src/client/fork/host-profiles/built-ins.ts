@@ -1,5 +1,23 @@
 import { getPackageVersion } from "@/client/telemetry/utils";
-import type { HostProfile, HostProfileId } from "./types";
+import type { HostProfile, HostProfileClientMeta, HostProfileId } from "./types";
+
+export const DEFAULT_CHATGPT_CLIENT_META: HostProfileClientMeta = {
+  "openai/locale": "en-US",
+  "webplus/i18n": "en-US",
+  "openai/userAgent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 ChatGPT/1.0",
+  "openai/userLocation": {
+    city: "San Francisco",
+    region: "CA",
+    country: "US",
+    timezone: "America/Los_Angeles",
+    latitude: 37.7749,
+    longitude: -122.4194,
+  },
+  "openai/subject": "user_2tX9rQ7kLmP3nB4vC8wZ",
+  "openai/session": "sess_9a8b7c6d5e4f3a2b1c",
+  "openai/organization": "org_chatgpt_simulated",
+};
 
 const CLAUDE_LIGHT_VARIABLES: Record<string, string> = {
   "--color-background-primary": "#FAF9F5",
@@ -157,6 +175,7 @@ export function createChatGptProfile(): HostProfile {
         '@font-face{font-family:"Söhne";src:local("Söhne"),local("system-ui");font-display:swap;}',
     },
     openaiShim: true,
+    clientToolCallMeta: DEFAULT_CHATGPT_CLIENT_META,
     source: "resources/captures/chatgpt-2026-10-07.json",
   };
 }

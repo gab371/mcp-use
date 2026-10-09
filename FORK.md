@@ -32,6 +32,12 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 | `libraries/typescript/packages/inspector/src/client/components/ViewPreview.tsx` | Use profile hostInfo in bundle preview | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/hooks/useMcpAppsHostContext.ts` | Wire profile hostContext (display modes, platform, user agent, styles, toolInfo gate) | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/components/MCPAppsDebugControls.tsx` | Add host profile select picker to debug controls toolbar | feat 01 |
+| `libraries/typescript/packages/client/src/transport/base.ts` | Forward `_meta` from options to client.callTool | feat 01 |
+| `libraries/typescript/packages/client/src/react/view/ViewRenderer.tsx` | Forward widget `_meta` to tool call | feat 01 |
+| `libraries/typescript/packages/client/src/react/types.ts` | Add `_meta` option to callTool options | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/components/tools/useToolExecution.ts` | Inject active host profile client `_meta` into tool call | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/components/tools/ToolExecutionPanel.tsx` | Render HostProfileMetaBar and include `_meta` in payload copy | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/components/chat/useChatMessagesClientSide.ts` | Inject active host profile client `_meta` into chat tool calls | feat 01 |
 
 `git grep -n "fork:"` must list exactly these lines.
 

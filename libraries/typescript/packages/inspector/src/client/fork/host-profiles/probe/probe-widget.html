@@ -105,6 +105,12 @@
     <pre id="openai-display" style="margin-top: 6px;">None</pre>
   </div>
 
+  <div class="card">
+    <div class="card-title">Tool Call Client Metadata (`_meta`)</div>
+    <div id="meta-status">Waiting for tool result...</div>
+    <pre id="meta-display" style="margin-top: 6px;">None</pre>
+  </div>
+
   <script>
     const captureData = {
       capturedAt: new Date().toISOString(),
@@ -162,6 +168,16 @@
         if (msg.params?.hostContext) {
           captureData.hostContext = msg.params.hostContext;
           document.getElementById("context-display").textContent = JSON.stringify(msg.params.hostContext, null, 2);
+        }
+      } else if (msg.method === "ui/notifications/tool-result" || msg.method === "notifications/tool-result") {
+        captureData.notifications.push(msg);
+        const meta = msg.params?.structuredContent?.receivedMeta || msg.params?._meta;
+        if (meta && Object.keys(meta).length > 0) {
+          document.getElementById("meta-status").innerHTML = '<span class="status-ok">● Received client _meta (' + Object.keys(meta).length + ' fields)</span>';
+          document.getElementById("meta-display").textContent = JSON.stringify(meta, null, 2);
+        } else {
+          document.getElementById("meta-status").innerHTML = '<span class="status-none">○ No _meta received</span>';
+          document.getElementById("meta-display").textContent = "Empty";
         }
       }
       updateOpenAiStatus();

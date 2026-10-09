@@ -28,6 +28,7 @@ import {
   type InspectorTraceEvent,
   type InspectorTraceEventInput,
 } from "./trace";
+import { useHostProfile } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
 import { DEFAULT_CHAT_SYSTEM_PROMPT } from "./system-prompt-default";
 import {
   isManagedLlmConfig,
@@ -119,6 +120,7 @@ export function useChatMessagesClientSide({
   skills = [],
   maxSteps,
 }: UseChatMessagesClientSideProps) {
+  const { getToolCallMeta } = useHostProfile(); // fork: feat 01 read host profile tool call metadata
   const retryServerId = connection.id ?? connection.url;
   const privateStore = useChatSessionStore();
   const store = sessionStore ?? privateStore;
@@ -339,7 +341,12 @@ export function useChatMessagesClientSide({
             let authorizationAttempts = 0;
             while (true) {
               try {
-                return await connection.callTool(toolName, args);
+                const injectedMeta = getToolCallMeta(); // fork: feat 01 inject active host profile client _meta into chat tool calls
+                return await connection.callTool(
+                  toolName,
+                  args,
+                  injectedMeta ? { _meta: injectedMeta } : undefined
+                );
               } catch (error) {
                 if (
                   !isOAuthInteractionRequired(error) ||

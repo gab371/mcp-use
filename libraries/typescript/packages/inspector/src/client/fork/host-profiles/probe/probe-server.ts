@@ -40,9 +40,17 @@ export function handleProbeRpc(method: string, params: any) {
         content: [
           {
             type: "text",
-            text: "MCP Apps Host Probe widget loaded.",
+            text: `MCP Apps Host Probe widget loaded. ${
+              params?._meta
+                ? `Received client _meta (${Object.keys(params._meta).length} keys).`
+                : "No client _meta received."
+            }`,
           },
         ],
+        structuredContent: {
+          receivedMeta: params?._meta ?? null,
+          calledTool: params?.name,
+        },
         _meta: {
           ui: {
             resourceUri: PROBE_RESOURCE_URI,
