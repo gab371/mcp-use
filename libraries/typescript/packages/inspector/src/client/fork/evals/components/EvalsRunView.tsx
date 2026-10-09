@@ -364,7 +364,14 @@ export function EvalsRunView({
                       <div className="text-[11px] font-semibold text-muted-foreground font-sans">
                         Iteration #{iter.iterationIndex + 1} ({iter.status.toUpperCase()})
                       </div>
-                      <TranscriptView iteration={iter} />
+                      <TranscriptView
+                        iteration={iter}
+                        suiteId={selectedSuiteId}
+                        caseId={caseDef.id}
+                        onGoldenSaved={() => {
+                          if (selectedSuiteId) loadSuiteDetails(selectedSuiteId);
+                        }}
+                      />
                     </div>
                   ))}
                 </div>

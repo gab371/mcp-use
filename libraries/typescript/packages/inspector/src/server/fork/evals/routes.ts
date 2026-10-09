@@ -34,15 +34,49 @@ export function createEvalRoutes(storage: EvalsStorage = new EvalsStorage()): Ho
     return c.json(detail);
   });
 
-  // Save suite draft by id
+  // Save suite draft by id or golden file
   router.put("/suites/:id{.+}", async (c) => {
-    const id = c.req.param("id");
-    const body = await c.req.json<{ yaml: string }>();
+    const rawId = c.req.param("id");
+
+    if (rawId.includes("/golden/")) {
+      const idx = rawId.indexOf("/golden/");
+      const suiteId = rawId.slice(0, idx);
+      const relPath = rawId.slice(idx + 1); // "golden/..."
+      const body = await c.req.json<{ content: string }>().catch(() => null);
+      if (!body || typeof body.content !== "string") {
+        return c.json({ error: "Missing content in request body" }, 400);
+      }
+      try {
+        await storage.saveGoldenFile(suiteId, relPath, body.content);
+        return c.json({ ok: true, file: relPath });
+      } catch (err: unknown) {
+        return c.json({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
+    }
+
+    const body = await c.req.json<{ yaml: string }>().catch(() => null);
     if (!body || typeof body.yaml !== "string") {
       return c.json({ error: "Missing yaml in request body" }, 400);
     }
-    await storage.saveSuite(id, body.yaml);
-    return c.json({ ok: true, id });
+    await storage.saveSuite(rawId, body.yaml);
+    return c.json({ ok: true, id: rawId });
+  });
+
+  // Delete golden file
+  router.delete("/suites/:id{.+}", async (c) => {
+    const rawId = c.req.param("id");
+    if (rawId.includes("/golden/")) {
+      const idx = rawId.indexOf("/golden/");
+      const suiteId = rawId.slice(0, idx);
+      const relPath = rawId.slice(idx + 1);
+      try {
+        await storage.deleteGoldenFile(suiteId, relPath);
+        return c.json({ ok: true, deleted: relPath });
+      } catch (err: unknown) {
+        return c.json({ error: err instanceof Error ? err.message : String(err) }, 500);
+      }
+    }
+    return c.json({ error: "Deletion not supported for this resource" }, 400);
   });
 
   // List runs

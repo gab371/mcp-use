@@ -139,12 +139,13 @@ export class EvalsStorage {
         let evalName: string | undefined;
 
         if (relDir && relDir !== "suites" && relDir !== ".") {
-          const parts = relDir.split(path.sep);
+          const rawParts = relDir.split(path.sep);
+          const parts = rawParts[0] === "suites" ? rawParts.slice(1) : rawParts;
           if (parts.length >= 2) {
             mcpName = parts[0];
             evalName = parts[1];
             id = `${mcpName}/${evalName}`;
-          } else if (parts.length === 1) {
+          } else if (parts.length === 1 && parts[0] !== "suites") {
             mcpName = parts[0];
             id = `${mcpName}/${filenameNoExt}`;
           }
@@ -190,10 +191,22 @@ export class EvalsStorage {
       return flatYml;
     } catch {}
 
-    // 2. Check modular path: <cleanId>/<evalName>.yaml or <cleanId>.yaml
+    // 2. Check modular path under suitesDir and baseDir: <cleanId>/<evalName>.yaml
     const parts = cleanId.split(/[/\\]/);
     if (parts.length >= 2) {
       const evalName = parts[parts.length - 1];
+      const suitesModularYaml = path.join(this.suitesDir, cleanId, `${evalName}.yaml`);
+      try {
+        await fs.access(suitesModularYaml);
+        return suitesModularYaml;
+      } catch {}
+
+      const suitesModularYml = path.join(this.suitesDir, cleanId, `${evalName}.yml`);
+      try {
+        await fs.access(suitesModularYml);
+        return suitesModularYml;
+      } catch {}
+
       const modularYaml = path.join(this.baseDir, cleanId, `${evalName}.yaml`);
       try {
         await fs.access(modularYaml);
@@ -210,13 +223,53 @@ export class EvalsStorage {
     // 3. Fallback search across all suite files
     const all = await this.findYamlFiles(this.baseDir);
     for (const f of all) {
-      const rel = path.relative(this.baseDir, f).replace(/\.ya?ml$/, "");
-      if (rel === cleanId || path.basename(rel) === cleanId) {
+      const rel = path.relative(this.suitesDir, f).replace(/\.ya?ml$/, "");
+      const relBase = path.relative(this.baseDir, f).replace(/\.ya?ml$/, "");
+      if (
+        rel === cleanId ||
+        relBase === cleanId ||
+        path.basename(rel) === cleanId ||
+        rel.endsWith(`/${cleanId}`) ||
+        relBase.endsWith(`/${cleanId}`)
+      ) {
         return f;
       }
     }
 
     return null;
+  }
+
+  async saveGoldenFile(suiteId: string, relPath: string, content: string): Promise<void> {
+    const suitePath = await this.findSuiteFilePath(suiteId);
+    if (!suitePath) {
+      throw new Error(`Suite "${suiteId}" not found`);
+    }
+    const suiteDir = path.dirname(suitePath);
+    const cleanRel = relPath.replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "");
+    const target = path.resolve(suiteDir, cleanRel);
+    if (!target.startsWith(suiteDir)) {
+      throw new Error("Invalid golden file path: path traversal forbidden");
+    }
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, content, "utf-8");
+  }
+
+  async deleteGoldenFile(suiteId: string, relPath: string): Promise<void> {
+    const suitePath = await this.findSuiteFilePath(suiteId);
+    if (!suitePath) {
+      throw new Error(`Suite "${suiteId}" not found`);
+    }
+    const suiteDir = path.dirname(suitePath);
+    const cleanRel = relPath.replace(/^(\.\.[/\\])+/, "").replace(/^[/\\]+/, "");
+    const target = path.resolve(suiteDir, cleanRel);
+    if (!target.startsWith(suiteDir)) {
+      throw new Error("Invalid golden file path: path traversal forbidden");
+    }
+    try {
+      await fs.unlink(target);
+    } catch {
+      // Ignore if file doesn't exist
+    }
   }
 
   async getSuite(id: string): Promise<string | null> {

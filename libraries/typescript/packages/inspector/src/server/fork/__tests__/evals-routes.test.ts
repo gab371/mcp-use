@@ -89,8 +89,13 @@ describe("evals server routes and storage", () => {
   });
 
   it("handles modular suites and golden asset resolution", async () => {
+<<<<<<< HEAD
     // Create modular structure in tmpDir: demo/attractions/attractions.yaml + golden/explorer.result.json
     const suiteDir = path.join(tmpDir, "demo", "attractions");
+=======
+    // Create modular structure in tmpDir: suites/demo/attractions/attractions.yaml + golden/explorer.result.json
+    const suiteDir = path.join(tmpDir, "suites", "demo", "attractions");
+>>>>>>> 66d51038 (feat(evals): relocate modular suites to .evals/suites/ and add golden asset UI editing & 1-click capture)
     const goldenDir = path.join(suiteDir, "golden");
     await fs.mkdir(goldenDir, { recursive: true });
 
@@ -118,11 +123,43 @@ describe("evals server routes and storage", () => {
     expect(detail.goldenFiles["golden/explorer.result.json"]).toBe(goldenJson);
     expect(detail.goldenFiles["explorer.result.json"]).toBe(goldenJson);
 
+<<<<<<< HEAD
     // 3. Check direct golden file route
     const rawRes = await app.request("/api/suites/demo/attractions/golden/explorer.result.json");
+=======
+    // 3. Check direct golden file GET route
+    const rawRes = await app.request("/api/suites/demo/attractions/golden/explorer.result.json");
+>>>>>>> 66d51038 (feat(evals): relocate modular suites to .evals/suites/ and add golden asset UI editing & 1-click capture)
     expect(rawRes.status).toBe(200);
     const rawText = await rawRes.text();
     expect(rawText).toBe(goldenJson);
+
+    // 4. Check saving a new golden answer via PUT
+    const putRes = await app.request("/api/suites/demo/attractions/golden/answer.md", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "# Golden Answer Sample" }),
+    });
+    expect(putRes.status).toBe(200);
+    const putData = await putRes.json<{ ok: boolean; file: string }>();
+    expect(putData.ok).toBe(true);
+
+    const savedContent = await fs.readFile(path.join(goldenDir, "answer.md"), "utf-8");
+    expect(savedContent).toBe("# Golden Answer Sample");
+
+    // 5. Check deleting a golden file via DELETE
+    const delRes = await app.request("/api/suites/demo/attractions/golden/answer.md", {
+      method: "DELETE",
+    });
+    expect(delRes.status).toBe(200);
+    const delData = await delRes.json<{ ok: boolean; deleted: string }>();
+    expect(delData.ok).toBe(true);
+
+    const existsAfterDelete = await fs
+      .access(path.join(goldenDir, "answer.md"))
+      .then(() => true)
+      .catch(() => false);
+    expect(existsAfterDelete).toBe(false);
   });
 });
 

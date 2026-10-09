@@ -37,8 +37,12 @@ COPY --from=builder /repo/libraries/typescript/packages/inspector/package.json .
 RUN mkdir -p .evals/suites .evals/runs
 =======
 # Copy default eval suites and golden datasets
+<<<<<<< HEAD
 COPY .evals ./.evals
 >>>>>>> a7483b2b (feat(evals): implement golden tool results and golden answers with modular suites)
+=======
+RUN mkdir -p .evals/suites .evals/runs
+>>>>>>> 66d51038 (feat(evals): relocate modular suites to .evals/suites/ and add golden asset UI editing & 1-click capture)
 
 # Copy entrypoint script
 COPY docker/inspector/entrypoint.sh /entrypoint.sh
