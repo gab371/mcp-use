@@ -186,3 +186,5 @@ conf.yaml
 # Local pnpm store
 .pnpm-store/
 .mcp-use/
+.plans/
+TODO.md
