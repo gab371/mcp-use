@@ -33,7 +33,7 @@ import { copyToClipboard } from "@/client/utils/browser";
 import { cn } from "@/client/lib/utils";
 import { JSONDisplay } from "../shared/JSONDisplay";
 import { ToolInputForm } from "./ToolInputForm";
-import { useHostProfile, HostProfileMetaBar } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile and meta bar
+import { HostProfileMetaBar } from "@/client/fork/host-profiles"; // fork: feat 01 render host profile meta bar
 
 interface ToolExecutionPanelProps {
   selectedTool: Tool | null;
@@ -72,7 +72,6 @@ export function ToolExecutionPanel({
   sendEmptyFields,
   onToggleEmpty,
 }: ToolExecutionPanelProps) {
-  const { getToolCallMeta } = useHostProfile(); // fork: feat 01 read host profile tool call metadata
   const compactLabelClass = "hidden @[700px]/tool-exec:inline";
   const compactShortcutClass =
     "hidden @[700px]/tool-exec:inline shrink-0 text-[10px] leading-none border border-current/30 p-1 rounded-full";
@@ -110,9 +109,7 @@ export function ToolExecutionPanel({
   const copyPayloadToClipboard = async () => {
     if (!selectedTool) return;
     try {
-      const basePayload = payloadToSend ?? toolArgs;
-      const clientMeta = getToolCallMeta(); // fork: feat 01 include _meta in payload copy if active
-      const payload = clientMeta ? { ...basePayload, _meta: clientMeta } : basePayload;
+      const payload = payloadToSend ?? toolArgs;
       await copyToClipboard(JSON.stringify(payload, null, 2));
       setCopiedPayload(true);
       setTimeout(() => setCopiedPayload(false), 2000);
@@ -375,7 +372,7 @@ export function ToolExecutionPanel({
           </div>
         )}
 
-        <HostProfileMetaBar /> {/* fork: feat 01 render host profile client metadata bar */}
+        <HostProfileMetaBar /> {/* fork: feat 01 render host profile meta bar */}
 
         <ToolInputForm
           selectedTool={selectedTool}

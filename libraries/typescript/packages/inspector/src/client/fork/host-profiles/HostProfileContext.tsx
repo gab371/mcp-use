@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { BUILT_IN_PROFILES, getHostProfile } from "./built-ins";
+import { setActiveToolCallMeta } from "./meta-transport";
 import type {
   HostProfile,
   HostProfileClientMeta,
@@ -43,6 +44,11 @@ function getInitialProfileId(): HostProfileId {
       const urlParams = new URLSearchParams(window.location.search);
       const urlHost = urlParams.get("host");
       if (urlHost && urlHost in BUILT_IN_PROFILES) {
+        try {
+          localStorage.setItem(STORAGE_KEY, urlHost);
+        } catch {
+          // ignore localStorage errors
+        }
         return urlHost as HostProfileId;
       }
     } catch {
@@ -176,6 +182,10 @@ export function HostProfileProvider({
     }
     return result;
   }, [clientToolCallMeta, isLocationEnabled]);
+
+  useEffect(() => {
+    setActiveToolCallMeta(getToolCallMeta());
+  }, [getToolCallMeta]);
 
   const value = useMemo<HostProfileContextValue>(
     () => ({

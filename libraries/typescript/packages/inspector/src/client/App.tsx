@@ -18,7 +18,7 @@ import { InspectorProvider, useInspector } from "./context/InspectorContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ShapeProvider } from "@/client/lib/shape-context";
 import { WidgetDebugProvider } from "./context/WidgetDebugContext";
-import { HostProfileProvider } from "./fork/host-profiles"; // fork: feat 01 provide host profile context
+import { HostProfileProvider, wrapTransportWithHostMeta } from "./fork/host-profiles"; // fork: feat 01 provide host profile context and transport wrapper
 import { getPackageVersion, initInspectorTelemetry } from "@/client/telemetry";
 import { getInspectorBase } from "./utils/basePath";
 import {
@@ -142,7 +142,8 @@ function App() {
             defaultServerConfig={{
               preventAutoAuth: true,
               useRedirectFlow: true,
-              wrapTransport: wrapTransportForLegacySampling,
+              wrapTransport: (t) =>
+                wrapTransportWithHostMeta(wrapTransportForLegacySampling(t)), // fork: feat 01 compose host profile metadata into transport
             }}
             clientInfo={{
               name: "mcp-use Inspector",

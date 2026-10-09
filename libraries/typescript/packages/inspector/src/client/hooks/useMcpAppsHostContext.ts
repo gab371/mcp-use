@@ -7,7 +7,7 @@ import type { McpUiHostContext } from "@mcp-use/client/react";
 import type { Tool } from "@mcp-use/client/react";
 import type { PlaygroundSettings } from "../context/WidgetDebugContext";
 import { getPackageVersion } from "../telemetry/utils";
-import { useHostProfile } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
+import { useHostProfile, applyHostProfile } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook and helper
 
 type DisplayMode = "inline" | "pip" | "fullscreen";
 
@@ -149,54 +149,40 @@ export function useMcpAppsHostContext({
 }: HostContextParams): McpUiHostContext {
   const { activeProfile } = useHostProfile(); // fork: feat 01 read active host profile
   return useMemo<McpUiHostContext>(
-    () => ({
-      theme,
-      displayMode,
-      availableDisplayModes: activeProfile.hostContext.availableDisplayModes, // fork: feat 01 profile display modes
-      containerDimensions: {
-        maxHeight,
-        maxWidth:
-          deviceType === "mobile"
-            ? maxWidth
-            : activeProfile.hostContext.containerDimensions?.maxWidth
-            ? Math.min(
-                maxWidth,
-                activeProfile.hostContext.containerDimensions.maxWidth
-              )
-            : maxWidth,
-      },
-      locale: playground.locale,
-      timeZone: playground.timeZone,
-      platform:
-        deviceType === "mobile"
-          ? "mobile"
-          : activeProfile.hostContext.platform, // fork: feat 01 profile platform
-      userAgent: activeProfile.hostContext.userAgent, // fork: feat 01 profile user agent
-      deviceCapabilities: playground.capabilities,
-      safeAreaInsets: playground.safeAreaInsets,
-      styles: {
-        variables: {
-          ...buildHostStyleVariables(),
-          ...activeProfile.hostContext.styleVariables(theme), // fork: feat 01 profile style variables
-        } as any,
-        css: {
-          fonts:
-            activeProfile.hostContext.fontCss ?? // fork: feat 01 profile font CSS
-            '@font-face{font-family:"MCP Host Sans";src:local("Ubuntu"),local("Arial");font-display:swap;}',
+    () =>
+      applyHostProfile( // fork: feat 01 apply active host profile
+        {
+          theme,
+          displayMode,
+          availableDisplayModes: ["inline", "pip", "fullscreen"],
+          containerDimensions: { maxHeight, maxWidth },
+          locale: playground.locale,
+          timeZone: playground.timeZone,
+          platform: deviceType === "mobile" ? "mobile" : "web",
+          userAgent: `mcp-use-inspector/${getPackageVersion()}`,
+          deviceCapabilities: playground.capabilities,
+          safeAreaInsets: playground.safeAreaInsets,
+          styles: {
+            variables: buildHostStyleVariables() as any,
+            css: {
+              fonts:
+                '@font-face{font-family:"MCP Host Sans";src:local("Ubuntu"),local("Arial");font-display:swap;}',
+            },
+          },
+          toolInfo: tool
+            ? {
+                id: toolCallId,
+                // ponytail: v2 Tool.inputSchema.properties values are JSONValue
+                // (nullable) while @modelcontextprotocol/ext-apps still types them
+                // as `object`. The runtime shape (JSON Schema) is identical, so
+                // cast across the two SDK type worlds at this boundary.
+                tool: tool as NonNullable<McpUiHostContext["toolInfo"]>["tool"],
+              }
+            : undefined,
         },
-      },
-      toolInfo:
-        tool && activeProfile.hostContext.toolInfo // fork: feat 01 profile toolInfo gate
-          ? {
-              id: toolCallId,
-              // ponytail: v2 Tool.inputSchema.properties values are JSONValue
-              // (nullable) while @modelcontextprotocol/ext-apps still types them
-              // as `object`. The runtime shape (JSON Schema) is identical, so
-              // cast across the two SDK type worlds at this boundary.
-              tool: tool as NonNullable<McpUiHostContext["toolInfo"]>["tool"],
-            }
-          : undefined,
-    }),
+        activeProfile,
+        deviceType as "desktop" | "mobile"
+      ),
     [
       theme,
       displayMode,

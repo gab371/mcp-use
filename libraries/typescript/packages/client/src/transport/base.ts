@@ -711,29 +711,8 @@ export abstract class BaseConnector {
     }
 
     logger.debug(`Calling tool '${name}' with args`, args);
-    const callParams: {
-      name: string;
-      arguments: Record<string, any>;
-      _meta?: Record<string, any>;
-    } = {
-      name,
-      arguments: args,
-    };
-    if ((options as any)?._meta) { // fork: feat 01 forward _meta from options to client.callTool
-      callParams._meta = (options as any)._meta;
-    }
-    const transportHeaders = (this as any).headers;
-    if (transportHeaders && typeof transportHeaders === "object") { // fork: feat 01 sync openai headers to transport
-      const meta = callParams._meta;
-      if (meta && typeof meta === "object") {
-        if (meta["openai/subject"]) transportHeaders["X-OpenAI-Subject"] = String(meta["openai/subject"]);
-        if (meta["openai/session"]) transportHeaders["X-OpenAI-Session"] = String(meta["openai/session"]);
-        if (meta["openai/organization"]) transportHeaders["X-OpenAI-Organization"] = String(meta["openai/organization"]);
-        if (meta["openai/locale"]) transportHeaders["X-OpenAI-Locale"] = String(meta["openai/locale"]);
-      }
-    }
     const res = await this.executeRequest(() =>
-      this.client!.callTool(callParams, enhancedOptions)
+      this.client!.callTool({ name, arguments: args }, enhancedOptions)
     );
     logger.debug(`Tool '${name}' returned`, res);
     return res as CallToolResult;

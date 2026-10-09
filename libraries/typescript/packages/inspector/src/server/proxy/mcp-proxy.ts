@@ -167,14 +167,6 @@ export function mountMcpProxy(app: Hono, options: McpProxyOptions = {}): void {
         "mcp-protocol-version",
         "X-Server-Id",
         "X-Requested-With",
-        "X-OpenAI-Subject", // fork: feat 01 allow openai identity headers in proxy CORS
-        "x-openai-subject",
-        "X-OpenAI-Session",
-        "x-openai-session",
-        "X-OpenAI-Organization",
-        "x-openai-organization",
-        "X-OpenAI-Locale",
-        "x-openai-locale",
       ],
       exposeHeaders: ["*"],
     })

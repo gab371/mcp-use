@@ -16,10 +16,9 @@ import {
 import { ChevronDown, CircleAlert, Plus } from "lucide-react";
 import type { McpServer } from "@mcp-use/client/react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { HostedUserMenu } from "@/client/components/HostedUserMenu";
 import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
-import { useHostProfile, HOST_PROFILE_LIST } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
+import { HostProfileSelect } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile selector
 import { MCPDeployClickEvent, captureInspectorEvent } from "@/client/telemetry";
 import { TabCountBadge } from "./shared/TabCountBadge";
 import { AddToClientDropdown } from "./AddToClientDropdown";
@@ -66,7 +65,6 @@ export function LayoutHeader({
     setIsTunnelStarting,
     embeddedConfig,
   } = useInspector();
-  const { activeProfileId, setActiveProfileId } = useHostProfile(); // fork: feat 01 read host profile
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mobileTabsCollapsed] = useState(true);
 
@@ -145,33 +143,12 @@ export function LayoutHeader({
     );
   };
 
-  const renderHostProfileSelect = (compact = false) => (
-    <div className="relative inline-flex items-center">
-      <select
-        data-testid="header-host-profile-select"
-        aria-label="Host Profile"
-        value={activeProfileId}
-        onChange={(e) => setActiveProfileId(e.target.value as any)}
-        className={`h-8 ${
-          compact ? "pl-2 pr-6 max-w-[120px]" : "pl-3 pr-7"
-        } text-xs font-medium rounded-full border border-border bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring text-foreground transition-colors truncate`}
-      >
-        {HOST_PROFILE_LIST.map((profile) => (
-          <option key={profile.id} value={profile.id}>
-            {compact ? profile.label : `Host: ${profile.label}`}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-2 size-3 text-muted-foreground" />
-    </div>
-  );
-
   const renderActionButtons = () => {
     if (embedded) return null;
 
     return (
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-        {renderHostProfileSelect()}
+        <HostProfileSelect /> {/* fork: feat 01 host profile selector */}
         {selectedServer &&
           (() => {
             const displayName = getServerDisplayName(selectedServer);
@@ -210,28 +187,29 @@ export function LayoutHeader({
               </>
             );
           })()}
-        {!isManufactDisabled() && ( // fork: chore-02 hide manufact deploy link
-          <a
-            href={
-              isLoggedIn
-                ? "https://manufact.com/cloud?ref=mcp-use-inspector"
-                : "https://manufact.com/signup?ref=mcp-use-inspector"
+        {/* prettier-ignore */}
+        {isManufactDisabled() ? null : ( // fork: chore-02 hide manufact deploy link
+        <a
+          href={
+            isLoggedIn
+              ? "https://manufact.com/cloud?ref=mcp-use-inspector"
+              : "https://manufact.com/signup?ref=mcp-use-inspector"
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            try {
+              captureInspectorEvent(
+                new MCPDeployClickEvent({ referrer: "mcp-use-inspector" })
+              ).catch(() => {});
+            } catch {
+              // ignore
             }
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => {
-              try {
-                captureInspectorEvent(
-                  new MCPDeployClickEvent({ referrer: "mcp-use-inspector" })
-                ).catch(() => {});
-              } catch {
-                // ignore
-              }
-            }}
-            className="inline-flex h-8 items-center justify-center rounded-full border border-blue-500/25 bg-blue-500/10 px-4 text-[13px] text-blue-500 outline-none cursor-pointer transition-colors hover:bg-blue-500/15 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-400 dark:hover:bg-blue-400/15 focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <span className="[text-box:trim-both_cap_alphabetic]">Deploy</span>
-          </a>
+          }}
+          className="inline-flex h-8 items-center justify-center rounded-full border border-blue-500/25 bg-blue-500/10 px-4 text-[13px] text-blue-500 outline-none cursor-pointer transition-colors hover:bg-blue-500/15 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-400 dark:hover:bg-blue-400/15 focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <span className="[text-box:trim-both_cap_alphabetic]">Deploy</span>
+        </a>
         )}
         {renderLoginButton()}
       </div>
@@ -310,7 +288,7 @@ export function LayoutHeader({
                 </div>
               </div>
               <div className="shrink-0 flex items-center gap-2">
-                {renderHostProfileSelect(true)}
+                <HostProfileSelect compact /> {/* fork: feat 01 host profile selector */}
                 {renderLoginButton(true)}
               </div>
             </>

@@ -361,28 +361,6 @@ export function useAutoConnect({
       // Merge custom headers with auth if provided
       const finalCustomHeaders = { ...customHeaders };
 
-      // fork: feat 01 pre-populate openai identity headers for chatgpt profile
-      const storedProfile =
-        typeof window !== "undefined"
-          ? window.localStorage?.getItem("mcp-inspector-host-profile") ||
-            window.localStorage?.getItem("__mcpUseInspectorHostProfile") ||
-            "chatgpt"
-          : "chatgpt";
-      if (storedProfile === "chatgpt") {
-        if (!finalCustomHeaders["X-OpenAI-Subject"]) {
-          finalCustomHeaders["X-OpenAI-Subject"] = "user_2tX9rQ7kLmP3nB4vC8wZ";
-        }
-        if (!finalCustomHeaders["X-OpenAI-Session"]) {
-          finalCustomHeaders["X-OpenAI-Session"] = "sess_9a8b7c6d5e4f3a2b1c";
-        }
-        if (!finalCustomHeaders["X-OpenAI-Organization"]) {
-          finalCustomHeaders["X-OpenAI-Organization"] = "org_chatgpt_simulated";
-        }
-        if (!finalCustomHeaders["X-OpenAI-Locale"]) {
-          finalCustomHeaders["X-OpenAI-Locale"] = "en-US";
-        }
-      }
-
       // If auth tokens are provided, add as Authorization header AND store in localStorage (embedded mode uses session storage)
       if (auth?.access_token) {
         const tokenType = auth.token_type || "bearer";

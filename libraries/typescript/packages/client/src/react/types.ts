@@ -641,8 +641,6 @@ export type UseMcpResult = {
       resetTimeoutOnProgress?: boolean;
       /** AbortSignal to cancel the request */
       signal?: AbortSignal;
-      /** Optional metadata to pass in JSON-RPC request params._meta */
-      _meta?: Record<string, unknown>; // fork: feat 01 tool call _meta option
     }
   ) => Promise<any>;
   /**

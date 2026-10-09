@@ -116,51 +116,52 @@ export function InspectorSidebarFooter({
           />
         )}
 
-        {!isManufactDisabled() && ( // fork: chore-02 hide manufact deploy card
-          collapsed ? (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <a
-                    href={manufactHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={onManufactClick}
-                    className={socialLinkClass}
-                    aria-label="Deploying your MCP Server? Try manufact.com"
-                  >
-                    <ArrowUpRight className="size-4" />
-                  </a>
-                }
-                nativeButton={false}
-              />
-              <TooltipContent side="right">
-                Deploying your MCP Server? Try manufact.com
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <a
-              href={manufactHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onManufactClick}
-              className="relative block rounded-xl border border-sidebar-border bg-white p-3 transition-colors hover:bg-sidebar-accent/50 dark:bg-black"
-            >
-              <ArrowUpRight
-                className="absolute top-2.5 right-2.5 size-3.5 text-muted-foreground"
-                aria-hidden
-              />
-              <p className="pr-5 text-xs leading-snug text-muted-foreground">
-                Deploying your MCP Server?
-              </p>
-              <p className="mt-0.5 text-xs leading-snug">
-                Try{" "}
-                <span className="font-medium underline underline-offset-2">
-                  manufact.com
-                </span>
-              </p>
-            </a>
-          )
+        {/* prettier-ignore */}
+        {isManufactDisabled() ? null : ( // fork: chore-02 hide manufact deploy card
+        collapsed ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <a
+                  href={manufactHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onManufactClick}
+                  className={socialLinkClass}
+                  aria-label="Deploying your MCP Server? Try manufact.com"
+                >
+                  <ArrowUpRight className="size-4" />
+                </a>
+              }
+              nativeButton={false}
+            />
+            <TooltipContent side="right">
+              Deploying your MCP Server? Try manufact.com
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <a
+            href={manufactHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onManufactClick}
+            className="relative block rounded-xl border border-sidebar-border bg-white p-3 transition-colors hover:bg-sidebar-accent/50 dark:bg-black"
+          >
+            <ArrowUpRight
+              className="absolute top-2.5 right-2.5 size-3.5 text-muted-foreground"
+              aria-hidden
+            />
+            <p className="pr-5 text-xs leading-snug text-muted-foreground">
+              Deploying your MCP Server?
+            </p>
+            <p className="mt-0.5 text-xs leading-snug">
+              Try{" "}
+              <span className="font-medium underline underline-offset-2">
+                manufact.com
+              </span>
+            </p>
+          </a>
+        )
         )}
 
         <div

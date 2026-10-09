@@ -220,6 +220,26 @@ describe("HostProfileContext & Provider", () => {
     expect(captured!.activeProfileId).toBe("chatgpt");
   });
 
+  it("initializes from ?host= URL parameter and persists it to localStorage", () => {
+    window.history.pushState({}, "", "/inspector?host=chatgpt");
+    let captured: ReturnType<typeof useHostProfile> | null = null;
+    function Probe() {
+      captured = useHostProfile();
+      return null;
+    }
+
+    act(() => {
+      root!.render(
+        <HostProfileProvider>
+          <Probe />
+        </HostProfileProvider>
+      );
+    });
+
+    expect(captured!.activeProfileId).toBe("chatgpt");
+    expect(mockLocalStorage.getItem("mcp-inspector-host-profile")).toBe("chatgpt");
+  });
+
   it("returns safe fallback when hook is used outside provider", () => {
     let captured: ReturnType<typeof useHostProfile> | null = null;
     function Probe() {

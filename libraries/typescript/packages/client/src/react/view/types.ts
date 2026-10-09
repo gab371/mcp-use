@@ -237,8 +237,6 @@ export interface ViewRendererProps {
   toolCallTimeout?: number;
   /** Dev mock of ChatGPT file APIs for local hosts (inspector). Default false. */
   mockOpenAiFileApis?: boolean;
-  /** Default client metadata injected into widget-initiated tool calls. */
-  defaultToolCallMeta?: Record<string, unknown>; // fork: feat 01 default metadata for widget tool calls
   /** Fired when the guest reports inline height via ui/notifications/size-changed. */
   onInlineHeightChange?: (height: number) => void;
   /** Inspector-only chrome shown above the iframe in fullscreen display mode. */

@@ -29,16 +29,17 @@ export function TunnelPopoverPanel({
 
       <div className="flex items-center justify-between">
         <h4 className="font-semibold text-sm">Tunnel URL</h4>
-        {!isManufactDisabled() && ( // fork: chore-02 hide manufact docs link
-          <a
-            href="https://manufact.com/docs/tunneling"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Docs
-            <ArrowUpRight className="size-3" />
-          </a>
+        {/* prettier-ignore */}
+        {isManufactDisabled() ? null : ( // fork: chore-02 hide manufact docs link
+        <a
+          href="https://manufact.com/docs/tunneling"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Docs
+          <ArrowUpRight className="size-3" />
+        </a>
         )}
       </div>
 

@@ -105,17 +105,18 @@ export function MobileInspectorToolbar({
             >
               <DiscordIcon className="size-4 shrink-0" />
             </a>
-            {!isManufactDisabled() && ( // fork: chore-02 hide manufact link
-              <a
-                href={manufactHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onManufactClick}
-                className={toolbarItemClass}
-                aria-label="manufact.com"
-              >
-                <ManufactLogomark size={16} />
-              </a>
+            {/* prettier-ignore */}
+            {isManufactDisabled() ? null : ( // fork: chore-02 hide manufact link
+            <a
+              href={manufactHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onManufactClick}
+              className={toolbarItemClass}
+              aria-label="manufact.com"
+            >
+              <ManufactLogomark size={16} />
+            </a>
             )}
           </nav>,
           document.body
