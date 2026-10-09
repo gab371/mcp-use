@@ -364,7 +364,9 @@ export function useAutoConnect({
       // fork: feat 01 pre-populate openai identity headers for chatgpt profile
       const storedProfile =
         typeof window !== "undefined"
-          ? window.localStorage?.getItem("__mcpUseInspectorHostProfile") || "chatgpt"
+          ? window.localStorage?.getItem("mcp-inspector-host-profile") ||
+            window.localStorage?.getItem("__mcpUseInspectorHostProfile") ||
+            "chatgpt"
           : "chatgpt";
       if (storedProfile === "chatgpt") {
         if (!finalCustomHeaders["X-OpenAI-Subject"]) {
