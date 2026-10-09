@@ -13,7 +13,8 @@ export type TabType =
   | "elicitation"
   | "notifications"
   | "server-metadata"
-  | "connection-settings";
+  | "connection-settings"
+  | "evals"; // fork: feat 02 register evals tab
 
 /**
  * Configuration injected by a host application when the inspector runs in

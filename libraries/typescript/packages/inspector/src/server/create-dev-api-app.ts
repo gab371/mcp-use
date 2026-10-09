@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { registerInspectorProxyRoutes } from "./proxy-routes.js";
+import { mountEvalRoutes } from "./fork/evals/index.js"; // fork: feat 02 import evals routes
 
 /** Hono app for inspector dev API routes (MCP proxy + OAuth BFF). */
 export function createDevApiApp(): Hono {
@@ -30,6 +31,8 @@ export function createDevApiApp(): Hono {
     oauthProxyAllowedOrigins: [],
     oauthProxyAllowLoopback: true,
   });
+
+  mountEvalRoutes(app); // fork: feat 02 mount evals API
 
   return app;
 }

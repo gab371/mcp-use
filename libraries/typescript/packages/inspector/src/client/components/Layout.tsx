@@ -202,6 +202,7 @@ export function Layout({ children }: LayoutProps) {
         "notifications",
         "server-metadata",
         "connection-settings",
+        "evals", // fork: feat 02 validate evals tab parameter
       ];
       if (validTabs.includes(tab as TabType)) {
         setActiveTab(tab as TabType);

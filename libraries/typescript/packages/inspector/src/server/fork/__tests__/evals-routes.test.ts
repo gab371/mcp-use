@@ -1,0 +1,90 @@
+import { describe, expect, it, beforeEach } from "vitest";
+import { Hono } from "hono";
+import os from "node:os";
+import path from "node:path";
+import fs from "node:fs/promises";
+import { EvalsStorage } from "../evals/storage";
+import { createEvalRoutes } from "../evals/routes";
+import type { RunResult } from "@/client/fork/evals/engine/verdict";
+
+describe("evals server routes and storage", () => {
+  let tmpDir: string;
+  let storage: EvalsStorage;
+  let app: Hono;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "evals-test-"));
+    storage = new EvalsStorage(tmpDir);
+    await storage.init();
+    app = new Hono();
+    app.route("/api", createEvalRoutes(storage));
+  });
+
+  it("lists seeded default suite", async () => {
+    const res = await app.request("/api/suites");
+    expect(res.status).toBe(200);
+    const data = await res.json<{ suites: Array<{ id: string; name: string }> }>();
+    expect(data.suites.length).toBeGreaterThan(0);
+    expect(data.suites.some((s) => s.id === "tool-routing")).toBe(true);
+  });
+
+  it("gets and saves suite drafts", async () => {
+    const saveRes = await app.request("/api/suites/custom-draft", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        yaml: "name: Custom Draft\ncases:\n  - id: c1\n    prompts: test\n    expect:\n      - noToolError: true\n",
+      }),
+    });
+    expect(saveRes.status).toBe(200);
+
+    const getRes = await app.request("/api/suites/custom-draft");
+    expect(getRes.status).toBe(200);
+    const data = await getRes.json<{ id: string; yaml: string }>();
+    expect(data.id).toBe("custom-draft");
+    expect(data.yaml).toContain("Custom Draft");
+  });
+
+  it("saves and retrieves runs", async () => {
+    const mockRun: RunResult = {
+      id: "run-test-1",
+      suiteName: "Tool routing",
+      status: "passed",
+      startedAt: 1000,
+      completedAt: 2000,
+      model: "gpt-4o",
+      provider: "openai",
+      toolsSnapshotHash: "abc12345",
+      totalCases: 1,
+      passedCases: 1,
+      failedCases: 0,
+      inconclusiveCases: 0,
+      flakyCases: 0,
+      performance: {
+        totalDurationMs: 1000,
+        totalToolCalls: 2,
+        totalTokens: 150,
+      },
+      caseResults: [],
+    };
+
+    const postRes = await app.request("/api/runs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mockRun),
+    });
+    expect(postRes.status).toBe(200);
+
+    const listRes = await app.request("/api/runs");
+    expect(listRes.status).toBe(200);
+    const listData = await listRes.json<{ runs: any[] }>();
+    expect(listData.runs.length).toBe(1);
+    expect(listData.runs[0].id).toBe("run-test-1");
+
+    const getRes = await app.request("/api/runs/run-test-1");
+    expect(getRes.status).toBe(200);
+    const getData = await getRes.json<{ run: RunResult }>();
+    expect(getData.run.id).toBe("run-test-1");
+    expect(getData.run.status).toBe("passed");
+  });
+});

@@ -32,6 +32,7 @@ import {
 import { useManagedCloudModel } from "./chat/useManagedCloudModel";
 
 import type { EditableConnectionConfig } from "@/client/utils/connectionUpdates";
+import { EvalsTab } from "@/client/fork/evals"; // fork: feat 02 import evals tab
 
 const ALL_KNOWN_TABS: TabType[] = [
   "tools",
@@ -44,6 +45,7 @@ const ALL_KNOWN_TABS: TabType[] = [
   "notifications",
   "server-metadata",
   "connection-settings",
+  "evals", // fork: feat 02 register evals tab
 ];
 
 function normalizeTab(tab: string): TabType {
@@ -419,6 +421,20 @@ export function LayoutContent({
               key={`connection-settings-${selectedServer.id}`}
               connection={selectedServer}
               onSave={onUpdateConnection}
+            />
+          </div>
+        )}
+      {isTabVisible("evals") && // fork: feat 02 mount evals tab
+        mountedTabs.has("evals") && (
+          <div
+            style={{
+              display: activeTab === "evals" ? "block" : "none",
+            }}
+            className="h-full"
+          >
+            <EvalsTab
+              key={`evals-${selectedServer.id}`}
+              connection={selectedServer}
             />
           </div>
         )}

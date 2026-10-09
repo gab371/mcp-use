@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Settings,
   Wrench,
+  FlaskConical, // fork: feat 02 import evals tab icon
   type LucideIcon,
 } from "lucide-react";
 import type { TabType } from "@/client/context/InspectorContext";
@@ -27,6 +28,7 @@ export const LAYOUT_TABS: LayoutTabDef[] = [
   { id: "separator" },
   { id: "chat", label: "Chat", icon: MessageCircle, alwaysExpanded: true },
   { id: "separator" },
+  { id: "evals", label: "Evals", icon: FlaskConical }, // fork: feat 02 add evals tab
   { id: "tools", label: "Tools", icon: Wrench },
   { id: "prompts", label: "Prompts", icon: MessageSquare },
   { id: "resources", label: "Resources", icon: FolderOpen },

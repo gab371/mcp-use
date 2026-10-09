@@ -6,6 +6,7 @@ import { cors } from "hono/cors";
 import open from "open";
 import { registerInspectorShell } from "./inspector-shell.js";
 import { registerInspectorProxyRoutes } from "./proxy-routes.js";
+import { mountEvalRoutes } from "./fork/evals/index.js"; // fork: feat 02 import evals routes
 import {
   findAvailablePort,
   formatErrorDiagnostic,
@@ -104,6 +105,7 @@ registerInspectorShell(app, {
   inspectorMode: "standalone",
   manufactChatUrl: process.env.MANUFACT_CHAT_URL,
 });
+mountEvalRoutes(app); // fork: feat 02 mount evals API routes
 
 async function startServer() {
   try {
