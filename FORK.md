@@ -90,5 +90,9 @@ Tested with Node `v26.2.0` (engines requirement: `>=22.22.2`) and pnpm `10.28.0`
 
 ```bash
 docker build -f docker/inspector/Dockerfile -t mcp-inspector:local .
-docker run -p 3000:3000 -e MCP_SERVER_PORT=8443 mcp-inspector:local
+# Run with local server port forwarding and persistent evals data
+docker run -p 3000:3000 \
+  -e MCP_SERVER_PORT=8443 \
+  -v $(pwd)/.evals:/app/.evals \
+  mcp-inspector:local
 ```

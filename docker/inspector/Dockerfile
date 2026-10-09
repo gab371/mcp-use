@@ -32,6 +32,9 @@ WORKDIR /app
 COPY --from=builder /repo/libraries/typescript/packages/inspector/dist ./dist
 COPY --from=builder /repo/libraries/typescript/packages/inspector/package.json ./package.json
 
+# Copy default eval suites
+RUN mkdir -p .evals/suites .evals/runs
+
 # Copy entrypoint script
 COPY docker/inspector/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
