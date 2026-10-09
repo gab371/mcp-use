@@ -21,7 +21,7 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 | ---- | ------------------ | ---- |
 | `libraries/typescript/packages/inspector/src/client/context/InspectorContext.tsx` | Disable fallback to `cloud.manufact.com` and disable free-tier upgrade prompts | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/components/chat/useManagedCloudModel.ts` | Skip fetching cloud models from Manufact backend | chore 02 |
-| `libraries/typescript/packages/inspector/src/client/components/LayoutHeader.tsx` | Hide Manufact Deploy/Cloud button in header | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/LayoutHeader.tsx` | Hide Manufact Deploy/Cloud button (chore 02); render Host Profile selector (feat 01) | chore 02, feat 01 |
 | `libraries/typescript/packages/inspector/src/client/components/HostedUserMenu.tsx` | Render null to hide Manufact user avatar/menu | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/components/layout/sidebar/InspectorSidebarFooter.tsx` | Hide Manufact deployment CTA in sidebar footer | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/components/layout/mobile/MobileInspectorToolbar.tsx` | Hide Manufact icon link in mobile toolbar | chore 02 |
