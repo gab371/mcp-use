@@ -22,6 +22,7 @@ import {
   AvatarImage,
 } from "@/client/components/ui/avatar";
 import { cn } from "@/client/lib/utils";
+import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
 
 function getInitial(
   name: string | null | undefined,
@@ -58,6 +59,7 @@ export function HostedUserMenu({
   onUserResolved,
   compact = false,
 }: HostedUserMenuProps) {
+  if (isManufactDisabled()) return null; // fork: chore-02 disable manufact user menu
   const { user, loaded, authorizing, authorize, logout, mode } =
     useHostedSession(chatApiUrl);
 

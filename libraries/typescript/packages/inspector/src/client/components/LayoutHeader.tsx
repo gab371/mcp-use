@@ -18,6 +18,7 @@ import type { McpServer } from "@mcp-use/client/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { HostedUserMenu } from "@/client/components/HostedUserMenu";
+import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
 import { MCPDeployClickEvent, captureInspectorEvent } from "@/client/telemetry";
 import { TabCountBadge } from "./shared/TabCountBadge";
 import { AddToClientDropdown } from "./AddToClientDropdown";
@@ -185,27 +186,29 @@ export function LayoutHeader({
               </>
             );
           })()}
-        <a
-          href={
-            isLoggedIn
-              ? "https://manufact.com/cloud?ref=mcp-use-inspector"
-              : "https://manufact.com/signup?ref=mcp-use-inspector"
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            try {
-              captureInspectorEvent(
-                new MCPDeployClickEvent({ referrer: "mcp-use-inspector" })
-              ).catch(() => {});
-            } catch {
-              // ignore
+        {!isManufactDisabled() && ( // fork: chore-02 hide manufact deploy link
+          <a
+            href={
+              isLoggedIn
+                ? "https://manufact.com/cloud?ref=mcp-use-inspector"
+                : "https://manufact.com/signup?ref=mcp-use-inspector"
             }
-          }}
-          className="inline-flex h-8 items-center justify-center rounded-full border border-blue-500/25 bg-blue-500/10 px-4 text-[13px] text-blue-500 outline-none cursor-pointer transition-colors hover:bg-blue-500/15 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-400 dark:hover:bg-blue-400/15 focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <span className="[text-box:trim-both_cap_alphabetic]">Deploy</span>
-        </a>
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              try {
+                captureInspectorEvent(
+                  new MCPDeployClickEvent({ referrer: "mcp-use-inspector" })
+                ).catch(() => {});
+              } catch {
+                // ignore
+              }
+            }}
+            className="inline-flex h-8 items-center justify-center rounded-full border border-blue-500/25 bg-blue-500/10 px-4 text-[13px] text-blue-500 outline-none cursor-pointer transition-colors hover:bg-blue-500/15 dark:border-blue-400/30 dark:bg-blue-400/10 dark:text-blue-400 dark:hover:bg-blue-400/15 focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <span className="[text-box:trim-both_cap_alphabetic]">Deploy</span>
+          </a>
+        )}
         {renderLoginButton()}
       </div>
     );

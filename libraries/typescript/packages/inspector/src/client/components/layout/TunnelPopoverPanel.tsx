@@ -3,6 +3,7 @@ import {
   statusSuccessTextClassName,
 } from "@/client/components/shared/StatusIcon";
 import { cn } from "@/client/lib/utils";
+import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
 import { ArrowUpRight, Square } from "lucide-react";
 
 export function TunnelPopoverPanel({
@@ -28,15 +29,17 @@ export function TunnelPopoverPanel({
 
       <div className="flex items-center justify-between">
         <h4 className="font-semibold text-sm">Tunnel URL</h4>
-        <a
-          href="https://manufact.com/docs/tunneling"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Docs
-          <ArrowUpRight className="size-3" />
-        </a>
+        {!isManufactDisabled() && ( // fork: chore-02 hide manufact docs link
+          <a
+            href="https://manufact.com/docs/tunneling"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Docs
+            <ArrowUpRight className="size-3" />
+          </a>
+        )}
       </div>
 
       <div>

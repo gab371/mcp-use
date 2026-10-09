@@ -11,12 +11,24 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 3. Never reformat or refactor upstream code.
 4. Follow published inspector tags, not arbitrary `main` commits.
 
+## Fork Flags
+
+- `isManufactDisabled()` (`libraries/typescript/packages/inspector/src/client/fork/manufact.ts`): build-time / runtime flag, defaults to `true`. Disables Manufact cloud features and entry points.
+
 ## Hooks in upstream files
 
 | File | What the hook does | Plan |
 | ---- | ------------------ | ---- |
+| `libraries/typescript/packages/inspector/src/client/context/InspectorContext.tsx` | Disable fallback to `cloud.manufact.com` and disable free-tier upgrade prompts | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/chat/useManagedCloudModel.ts` | Skip fetching cloud models from Manufact backend | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/LayoutHeader.tsx` | Hide Manufact Deploy/Cloud button in header | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/HostedUserMenu.tsx` | Render null to hide Manufact user avatar/menu | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/layout/sidebar/InspectorSidebarFooter.tsx` | Hide Manufact deployment CTA in sidebar footer | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/layout/mobile/MobileInspectorToolbar.tsx` | Hide Manufact icon link in mobile toolbar | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/components/layout/TunnelPopoverPanel.tsx` | Hide Manufact tunneling docs link | chore 02 |
+| `libraries/typescript/packages/inspector/src/server/inspector-shell.ts` | Default anonymized telemetry to false | chore 02 |
 
-`git grep -n "fork:"` must list exactly these lines. Currently 0 hooks (clean baseline).
+`git grep -n "fork:"` must list exactly these lines.
 
 ## Update routine
 

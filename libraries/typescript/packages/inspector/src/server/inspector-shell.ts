@@ -201,7 +201,7 @@ export function registerInspectorShell(
         : p("/inspector/api/proxy"),
     disableTelemetry:
       config?.disableTelemetry ??
-      process.env.MCP_USE_ANONYMIZED_TELEMETRY === "false",
+      process.env.MCP_USE_ANONYMIZED_TELEMETRY !== "true", // fork: chore-02 default telemetry to off
   };
 
   const serveShell = (c: Context) => {

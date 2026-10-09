@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { buildManagedAuthHeaders, FALLBACK_MANAGED_MODEL_ID } from "./freeTier";
+import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
 
 export interface CloudModel {
   id: string;
@@ -54,7 +55,7 @@ export function useManagedCloudModel(
   );
 
   useEffect(() => {
-    if (!enabled || !origin) return;
+    if (!enabled || !origin || isManufactDisabled()) return; // fork: chore-02 disable manufact cloud model fetching
     let cancelled = false;
     setIsLoading(true);
     void (async () => {

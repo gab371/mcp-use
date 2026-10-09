@@ -1,6 +1,7 @@
 import type { LLMConfig, StreamProtocol } from "@/client/components/chat/types";
 import type { ReactNode } from "react";
 import { createContext, use, useCallback, useState } from "react";
+import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
 
 export type TabType =
   | "tools"
@@ -172,10 +173,13 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
       ? (import.meta as unknown as Record<string, Record<string, string>>).env
           ?.VITE_MANUFACT_CHAT_URL
       : undefined;
+  const defaultHostedChatUrl = isManufactDisabled() // fork: chore-02 disable manufact chat fallback
+    ? undefined
+    : "https://cloud.manufact.com/api/v1/inspector/chat/stream";
   const hostedChatUrl =
     runtimeHostedChatUrl?.trim() ||
     buildTimeHostedChatUrl?.trim() ||
-    "https://cloud.manufact.com/api/v1/inspector/chat/stream";
+    defaultHostedChatUrl;
 
   const [state, setState] = useState<InspectorState>({
     selectedServerId: null,
@@ -191,7 +195,7 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
     embeddedConfig: {
       chatApiUrl: hostedChatUrl,
       chatStreamProtocol: "data-stream",
-      chatEnableFreeTierUpgrade: true,
+      chatEnableFreeTierUpgrade: !isManufactDisabled(), // fork: chore-02 disable free tier upgrade
     },
   });
 
@@ -249,7 +253,8 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
           ...config,
           chatApiUrl: config.chatApiUrl?.trim() || hostedChatUrl,
           chatStreamProtocol: config.chatStreamProtocol ?? "data-stream",
-          chatEnableFreeTierUpgrade: config.chatEnableFreeTierUpgrade ?? true,
+          chatEnableFreeTierUpgrade:
+            config.chatEnableFreeTierUpgrade ?? !isManufactDisabled(), // fork: chore-02 disable free tier upgrade
         },
       }));
     },

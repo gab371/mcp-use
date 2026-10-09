@@ -10,6 +10,7 @@ import { useInspector } from "@/client/context/InspectorContext";
 import { useHostedSession } from "@/client/hooks/useHostedSession";
 import { cn } from "@/client/lib/utils";
 import { ManufactLogomark } from "@/client/components/chat/providerMeta";
+import { isManufactDisabled } from "@/client/fork/manufact"; // fork: chore-02 import fork flag
 import { MCPDeployClickEvent, captureInspectorEvent } from "@/client/telemetry";
 import { ScrollText } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -104,16 +105,18 @@ export function MobileInspectorToolbar({
             >
               <DiscordIcon className="size-4 shrink-0" />
             </a>
-            <a
-              href={manufactHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onManufactClick}
-              className={toolbarItemClass}
-              aria-label="manufact.com"
-            >
-              <ManufactLogomark size={16} />
-            </a>
+            {!isManufactDisabled() && ( // fork: chore-02 hide manufact link
+              <a
+                href={manufactHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onManufactClick}
+                className={toolbarItemClass}
+                aria-label="manufact.com"
+              >
+                <ManufactLogomark size={16} />
+              </a>
+            )}
           </nav>,
           document.body
         )}
