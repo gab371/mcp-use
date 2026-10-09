@@ -19,6 +19,7 @@ import {
   INSPECTOR_RATE_LIMIT_WINDOW_SECONDS,
   inspectorRateLimitResponse,
 } from "../rate-limit.js";
+import { getStaticClient } from "../fork/oauth-clients/index.js"; // fork: feat 04 import getStaticClient
 
 type OAuthEndpointKind =
   | "registration"
@@ -357,6 +358,8 @@ export function mountOAuthProxy(
           headers,
           bindingKey,
           clients: confidentialClients,
+          enableLogging,
+          logPrefix,
         });
       }
       if (
@@ -867,8 +870,10 @@ function applyConfidentialClientAuthentication(options: {
   headers: Headers;
   bindingKey: string;
   clients: Map<string, ConfidentialClient>;
+  enableLogging?: boolean;
+  logPrefix?: string;
 }): string | undefined {
-  const { body, headers, bindingKey, clients } = options;
+  const { body, headers, bindingKey, clients, enableLogging, logPrefix } = options;
   if (
     !body ||
     !(headers.get("content-type") ?? "").includes(
@@ -883,15 +888,29 @@ function applyConfidentialClientAuthentication(options: {
   if (!clientId) return body;
 
   const key = confidentialClientKey(bindingKey, clientId);
-  const client = clients.get(key);
-  if (!client) return body;
+  const client = clients.get(key) ?? getStaticClient(key); // fork: feat 04 static confidential client
+  if (!client) {
+    log(
+      enableLogging ?? false,
+      logPrefix,
+      `No confidential client secret found for client_id "${clientId}" on ${bindingKey}`
+    );
+    return body;
+  }
   if (client.expiresAt <= Date.now()) {
     clients.delete(key);
     return body;
   }
 
+  log(
+    enableLogging ?? false,
+    logPrefix,
+    `Applied confidential client secret (${client.authMethod}) for client_id "${clientId}" on ${bindingKey}`
+  );
+
   params.delete("client_secret");
   if (client.authMethod === "client_secret_basic") {
+    params.delete("client_id");
     const encoded = Buffer.from(
       `${encodeOAuthClientCredential(clientId)}:${encodeOAuthClientCredential(client.clientSecret)}`,
       "utf8"
@@ -1008,7 +1027,7 @@ function pruneBindings(bindings: Map<string, Binding>): void {
   }
 }
 
-function canonicalUrl(url: URL): string {
+export function canonicalUrl(url: URL): string { // fork: feat 04 export canonicalUrl
   const copy = new URL(url);
   copy.hash = "";
   if (

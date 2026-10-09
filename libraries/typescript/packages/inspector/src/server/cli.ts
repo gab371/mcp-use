@@ -7,6 +7,7 @@ import open from "open";
 import { registerInspectorShell } from "./inspector-shell.js";
 import { registerInspectorProxyRoutes } from "./proxy-routes.js";
 import { mountEvalRoutes } from "./fork/evals/index.js"; // fork: feat 02 import evals routes
+import { mountStaticClientRoutes } from "./fork/oauth-clients/index.js"; // fork: feat 04 import static client routes
 import {
   findAvailablePort,
   formatErrorDiagnostic,
@@ -102,6 +103,7 @@ registerInspectorProxyRoutes(app, {
 });
 
 mountEvalRoutes(app); // fork: feat 02 mount evals API routes
+mountStaticClientRoutes(app); // fork: feat 04 mount static client routes
 
 registerInspectorShell(app, {
   inspectorMode: "standalone",

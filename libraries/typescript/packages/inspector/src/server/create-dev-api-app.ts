@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { registerInspectorProxyRoutes } from "./proxy-routes.js";
 import { mountEvalRoutes } from "./fork/evals/index.js"; // fork: feat 02 import evals routes
+import { mountStaticClientRoutes } from "./fork/oauth-clients/index.js"; // fork: feat 04 import static client routes
 
 /** Hono app for inspector dev API routes (MCP proxy + OAuth BFF). */
 export function createDevApiApp(): Hono {
@@ -33,6 +34,7 @@ export function createDevApiApp(): Hono {
   });
 
   mountEvalRoutes(app); // fork: feat 02 mount evals API
+  mountStaticClientRoutes(app); // fork: feat 04 mount static client routes
 
   return app;
 }

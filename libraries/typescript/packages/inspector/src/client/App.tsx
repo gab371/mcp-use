@@ -19,6 +19,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { ShapeProvider } from "@/client/lib/shape-context";
 import { WidgetDebugProvider } from "./context/WidgetDebugContext";
 import { HostProfileProvider, wrapTransportWithHostMeta } from "./fork/host-profiles"; // fork: feat 01 provide host profile context and transport wrapper
+import { ForkStaticClientsSync } from "./fork/oauth-clients"; // fork: feat 04 sync confidential client secrets
 import { getPackageVersion, initInspectorTelemetry } from "@/client/telemetry";
 import { getInspectorBase } from "./utils/basePath";
 import {
@@ -285,6 +286,7 @@ function App() {
             }}
           >
             <InspectorProvider>
+              <ForkStaticClientsSync /> {/* fork: feat 04 sync confidential client secrets */}
               <InspectorTabSync activeTabRef={activeTabRef} />
               <Router basename={inspectorBase}>
                 <Routes>
