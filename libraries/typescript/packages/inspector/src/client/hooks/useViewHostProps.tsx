@@ -147,7 +147,7 @@ export function useViewHostProps(options: {
   } = useWidgetDebug();
   const { onSamplingRequest, onDownloadFile } =
     useMcpAppsHostActions(llmConfig);
-  const { activeProfile } = useHostProfile(); // fork: feat 01 read active host profile
+  const { activeProfile, getToolCallMeta } = useHostProfile(); // fork: feat 01 read active host profile
 
   const cspMode: ViewCspMode =
     playground.cspMode === "permissive" ? "permissive" : "widget-declared";
@@ -410,6 +410,7 @@ export function useViewHostProps(options: {
     onReady,
     onLifecycleChange,
     mockOpenAiFileApis: activeProfile.openaiShim, // fork: feat 01 profile openaiShim
+    defaultToolCallMeta: getToolCallMeta(), // fork: feat 01 pass active profile tool call metadata
     fullscreenHeader,
     renderFullscreenClose,
   };

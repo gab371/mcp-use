@@ -157,6 +157,7 @@ function ViewRendererBase({
   wrapTransport,
   toolCallTimeout = DEFAULT_TOOL_CALL_TIMEOUT,
   mockOpenAiFileApis = false,
+  defaultToolCallMeta, // fork: feat 01 accept defaultToolCallMeta
   onInlineHeightChange,
   fullscreenHeader,
   renderFullscreenClose,
@@ -561,10 +562,14 @@ function ViewRendererBase({
             assertAppCanCallTool(conn.tools, name);
             // A failure rejects this request back to the View. It must not
             // send tool-cancelled, which refers to the rendering invocation.
+            const effectiveMeta = { // fork: feat 01 merge defaultToolCallMeta into widget tool calls
+              ...(defaultToolCallMeta || {}),
+              ...(_meta || {}),
+            };
             return await conn.callTool(name, args || {}, {
               timeout: toolCallTimeout,
               resetTimeoutOnProgress: true,
-              ...(_meta ? { _meta } : {}), // fork: feat 01 forward widget _meta to tool call
+              ...(Object.keys(effectiveMeta).length > 0 ? { _meta: effectiveMeta } : {}),
             });
           }) as typeof bridge.oncalltool;
         }

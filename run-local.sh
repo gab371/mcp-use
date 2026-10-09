@@ -25,8 +25,18 @@ fi
 
 INSPECTOR_CLI="${ROOT_DIR}/libraries/typescript/packages/inspector/dist/cli.js"
 
-if [ ! -f "$INSPECTOR_CLI" ]; then
-  echo "📦 Inspector dist not found. Building packages..."
+BUILD_FLAG="${BUILD:-false}"
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--build" ] || [ "$arg" = "-b" ]; then
+    BUILD_FLAG="true"
+  else
+    ARGS+=("$arg")
+  fi
+done
+
+if [ "$BUILD_FLAG" = "true" ] || [ ! -f "$INSPECTOR_CLI" ]; then
+  echo "📦 Building packages..."
   export NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false
   pnpm --dir "${ROOT_DIR}/libraries/typescript" --filter @mcp-use/client build
   pnpm --dir "${ROOT_DIR}/libraries/typescript" --filter @mcp-use/agent build
@@ -34,4 +44,4 @@ if [ ! -f "$INSPECTOR_CLI" ]; then
 fi
 
 echo "🚀 Starting MCP Inspector on http://localhost:${PORT}/inspector"
-exec node "$INSPECTOR_CLI" --port "$PORT" "$@"
+exec node "$INSPECTOR_CLI" --port "$PORT" "${ARGS[@]}"

@@ -28,12 +28,16 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 | `libraries/typescript/packages/inspector/src/client/components/layout/TunnelPopoverPanel.tsx` | Hide Manufact tunneling docs link | chore 02 |
 | `libraries/typescript/packages/inspector/src/server/inspector-shell.ts` | Default anonymized telemetry to false | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/App.tsx` | Provide HostProfileContext across inspector and preview | feat 01 |
-| `libraries/typescript/packages/inspector/src/client/hooks/useViewHostProps.tsx` | Pass profile hostInfo, hostCapabilities, and openaiShim | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/hooks/useViewHostProps.tsx` | Pass profile hostInfo, hostCapabilities, openaiShim, and defaultToolCallMeta | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/components/ViewPreview.tsx` | Use profile hostInfo in bundle preview | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/hooks/useMcpAppsHostContext.ts` | Wire profile hostContext (display modes, platform, user agent, styles, toolInfo gate) | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/hooks/useAutoConnect.ts` | Pre-populate OpenAI identity headers for ChatGPT profile | feat 01 |
+| `libraries/typescript/packages/inspector/src/server/proxy/mcp-proxy.ts` | Allow OpenAI identity headers in proxy CORS | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/components/MCPAppsDebugControls.tsx` | Add host profile select picker to debug controls toolbar | feat 01 |
-| `libraries/typescript/packages/client/src/transport/base.ts` | Forward `_meta` from options to client.callTool | feat 01 |
-| `libraries/typescript/packages/client/src/react/view/ViewRenderer.tsx` | Forward widget `_meta` to tool call | feat 01 |
+| `libraries/typescript/packages/client/src/transport/base.ts` | Forward `_meta` to client.callTool and sync OpenAI identity headers to transport | feat 01 |
+| `libraries/typescript/packages/client/src/react/view/ViewRenderer.tsx` | Forward widget `_meta` and merge defaultToolCallMeta into tool calls | feat 01 |
+| `libraries/typescript/packages/client/src/react/view/types.ts` | Add defaultToolCallMeta prop to ViewRendererProps | feat 01 |
+| `libraries/typescript/packages/client/src/react/view/inject-openai-file-apis.ts` | Mock session and subject on window.openai | feat 01 |
 | `libraries/typescript/packages/client/src/react/types.ts` | Add `_meta` option to callTool options | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/components/tools/useToolExecution.ts` | Inject active host profile client `_meta` into tool call | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/components/tools/ToolExecutionPanel.tsx` | Render HostProfileMetaBar and include `_meta` in payload copy | feat 01 |

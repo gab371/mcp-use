@@ -138,6 +138,8 @@ const OPENAI_COMPATIBILITY_BRIDGE_SCRIPT = `<script>
     capabilities: { hover: true, touch: false }
   };
   api.locale = api.locale || "en";
+  api.session = api.session || "sess_9a8b7c6d5e4f3a2b1c"; // fork: feat 01 mock session on window.openai
+  api.subject = api.subject || "user_2tX9rQ7kLmP3nB4vC8wZ"; // fork: feat 01 mock subject on window.openai
 
   api.callTool = api.callTool || function (name, args) {
     return sendRequest("tools/call", { name: name, arguments: args || {} });
