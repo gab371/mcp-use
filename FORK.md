@@ -58,6 +58,15 @@ NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false pnpm --dir libraries/typescript
 node libraries/typescript/packages/inspector/dist/cli.js --port 3000
 ```
 
+### Local runner script (port 3017 with local root CA)
+
+To run the inspector locally on port 3017 with the trusted root certificate in `.certificates/rootCA.pem` (supporting local HTTPS MCP servers signed by mkcert):
+
+```bash
+./run-local.sh [--url <url>]
+# e.g.: ./run-local.sh --url https://localhost:8443/mcp
+```
+
 Alternatively, from within `libraries/typescript`:
 
 ```bash

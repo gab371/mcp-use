@@ -177,14 +177,15 @@ static/browser_history/*.gif
 
 # user conf
 conf.yaml
+.certificates/
 
 # Agents
 .cursor
 .cursorrules
 .claude
+.plans/
+TODO.md
 
 # Local pnpm store
 .pnpm-store/
 .mcp-use/
-.plans/
-TODO.md
