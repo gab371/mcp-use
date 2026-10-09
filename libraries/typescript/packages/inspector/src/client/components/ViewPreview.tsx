@@ -35,6 +35,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useViewHostProps } from "@/client/hooks/useViewHostProps";
+import { useHostProfile } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
 import { getBasePath } from "@/client/utils/basePath";
 import { Spinner } from "@/client/components/ui/spinner";
 
@@ -327,6 +328,7 @@ function ViewPreviewBundle({
   usePreviewViewport();
   useBundleReadinessSignal(rendererReady, containerRef);
   const onLifecycleChange = useViewLifecycleErrorSignal();
+  const { activeProfile } = useHostProfile(); // fork: feat 01 read active host profile
 
   const readResource = useMemo(() => {
     return async (uri: string) => {
@@ -363,7 +365,7 @@ function ViewPreviewBundle({
           resourceUri: bundle.resourceUri,
         }}
         cspMode="permissive"
-        hostInfo={{ name: "mcp-use-inspector", version: "11.0.0" }}
+        hostInfo={activeProfile.hostInfo} // fork: feat 01 use profile hostInfo
         hostContext={{ theme }}
         // A partial `window.openai` makes legacy `useWidget()` builds select
         // the ChatGPT adapter before the MCP Apps handshake and render with

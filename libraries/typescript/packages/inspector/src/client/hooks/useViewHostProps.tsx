@@ -22,6 +22,7 @@ import { useMcpAppsHostActions } from "@/client/hooks/useMcpAppsHostActions";
 import { buildCspAuditRecord } from "@/client/mcp-apps/csp-audit";
 import { getPackageVersion } from "@/client/telemetry/utils";
 import { getServerDisplayName, getServerIconUrl } from "@/client/utils/servers";
+import { useHostProfile } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
 import {
   normalizeWidgetModelContext,
   serializeWidgetModelContexts,
@@ -146,6 +147,7 @@ export function useViewHostProps(options: {
   } = useWidgetDebug();
   const { onSamplingRequest, onDownloadFile } =
     useMcpAppsHostActions(llmConfig);
+  const { activeProfile } = useHostProfile(); // fork: feat 01 read active host profile
 
   const cspMode: ViewCspMode =
     playground.cspMode === "permissive" ? "permissive" : "widget-declared";
@@ -384,7 +386,8 @@ export function useViewHostProps(options: {
   return {
     source,
     sandboxUrl,
-    hostInfo: HOST_INFO,
+    hostInfo: activeProfile.hostInfo, // fork: feat 01 profile hostInfo
+    hostCapabilities: activeProfile.hostCapabilities, // fork: feat 01 pass profile hostCapabilities
     hostContext,
     cspMode,
     wrapTransport,
@@ -406,7 +409,7 @@ export function useViewHostProps(options: {
     chromeless,
     onReady,
     onLifecycleChange,
-    mockOpenAiFileApis: true,
+    mockOpenAiFileApis: activeProfile.openaiShim, // fork: feat 01 profile openaiShim
     fullscreenHeader,
     renderFullscreenClose,
   };

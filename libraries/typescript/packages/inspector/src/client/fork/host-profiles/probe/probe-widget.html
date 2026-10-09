@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Apps Host Probe</title>
+  <style>
+    :root {
+      font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+      background-color: var(--color-background-primary, #ffffff);
+      color: var(--color-text-primary, #111111);
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border-primary, #e2e8f0);
+    }
+    h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    button {
+      background-color: var(--color-background-inverse, #111111);
+      color: var(--color-text-inverse, #ffffff);
+      border: 1px solid var(--color-border-primary, #111111);
+      border-radius: var(--border-radius-md, 6px);
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--color-background-secondary, #f1f5f9);
+      color: var(--color-text-secondary, #475569);
+      margin-left: 8px;
+    }
+    .card {
+      background: var(--color-background-secondary, #f8fafc);
+      border: 1px solid var(--color-border-secondary, #e2e8f0);
+      border-radius: var(--border-radius-md, 8px);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--color-text-secondary, #475569);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    pre {
+      margin: 0;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .status-ok { color: #16a34a; }
+    .status-none { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <span style="font-size: 18px; font-weight: bold;">MCP Apps Host Probe</span>
+      <span id="host-badge" class="badge">Waiting for handshake...</span>
+    </div>
+    <button id="copy-btn" onclick="copyCapture()">Copy Capture JSON</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Host Handshake (`ui/initialize`)</div>
+    <pre id="init-display">Handshake pending...</pre>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Host Context (`hostContext`)</div>
+    <pre id="context-display">None</pre>
+  </div>
+
+  <div class="card">
+    <div class="card-title">`window.openai` Shim Status</div>
+    <div id="openai-status">Checking...</div>
+    <pre id="openai-display" style="margin-top: 6px;">None</pre>
+  </div>
+
+  <script>
+    const captureData = {
+      capturedAt: new Date().toISOString(),
+      initializeParams: null,
+      hostContext: null,
+      windowOpenai: null,
+      notifications: []
+    };
+
+    function updateOpenAiStatus() {
+      if (typeof window.openai !== "undefined") {
+        captureData.windowOpenai = {
+          theme: window.openai.theme,
+          displayMode: window.openai.displayMode,
+          locale: window.openai.locale,
+          maxHeight: window.openai.maxHeight,
+          safeArea: window.openai.safeArea,
+          userAgent: window.openai.userAgent
+        };
+        document.getElementById("openai-status").innerHTML = '<span class="status-ok">● Detected window.openai</span>';
+        document.getElementById("openai-display").textContent = JSON.stringify(captureData.windowOpenai, null, 2);
+      } else {
+        captureData.windowOpenai = null;
+        document.getElementById("openai-status").innerHTML = '<span class="status-none">○ window.openai not present</span>';
+        document.getElementById("openai-display").textContent = "window.openai is undefined";
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      const msg = event.data;
+      if (!msg || typeof msg !== "object") return;
+
+      if (msg.method === "ui/initialize" || msg.method === "initialize") {
+        captureData.initializeParams = msg.params;
+        const hostInfo = msg.params?.hostInfo;
+        if (hostInfo) {
+          document.getElementById("host-badge").textContent = `${hostInfo.name} v${hostInfo.version}`;
+        }
+        document.getElementById("init-display").textContent = JSON.stringify(msg.params, null, 2);
+
+        if (msg.params?.hostContext) {
+          captureData.hostContext = msg.params.hostContext;
+          document.getElementById("context-display").textContent = JSON.stringify(msg.params.hostContext, null, 2);
+        }
+
+        if (msg.id !== undefined) {
+          event.source.postMessage({
+            jsonrpc: "2.0",
+            id: msg.id,
+            result: { protocolVersion: "2024-11-05" }
+          }, event.origin || "*");
+        }
+      } else if (msg.method === "ui/notifications/host-context-changed" || msg.method === "notifications/host-context-changed") {
+        captureData.notifications.push(msg);
+        if (msg.params?.hostContext) {
+          captureData.hostContext = msg.params.hostContext;
+          document.getElementById("context-display").textContent = JSON.stringify(msg.params.hostContext, null, 2);
+        }
+      }
+      updateOpenAiStatus();
+    });
+
+    updateOpenAiStatus();
+
+    function copyCapture() {
+      const json = JSON.stringify(captureData, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        const btn = document.getElementById("copy-btn");
+        const prev = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = prev; }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

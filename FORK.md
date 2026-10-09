@@ -27,6 +27,11 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 | `libraries/typescript/packages/inspector/src/client/components/layout/mobile/MobileInspectorToolbar.tsx` | Hide Manufact icon link in mobile toolbar | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/components/layout/TunnelPopoverPanel.tsx` | Hide Manufact tunneling docs link | chore 02 |
 | `libraries/typescript/packages/inspector/src/server/inspector-shell.ts` | Default anonymized telemetry to false | chore 02 |
+| `libraries/typescript/packages/inspector/src/client/App.tsx` | Provide HostProfileContext across inspector and preview | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/hooks/useViewHostProps.tsx` | Pass profile hostInfo, hostCapabilities, and openaiShim | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/components/ViewPreview.tsx` | Use profile hostInfo in bundle preview | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/hooks/useMcpAppsHostContext.ts` | Wire profile hostContext (display modes, platform, user agent, styles, toolInfo gate) | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/components/MCPAppsDebugControls.tsx` | Add host profile select picker to debug controls toolbar | feat 01 |
 
 `git grep -n "fork:"` must list exactly these lines.
 

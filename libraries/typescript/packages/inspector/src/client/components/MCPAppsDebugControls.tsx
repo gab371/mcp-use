@@ -34,6 +34,7 @@ import { useResourceProps, type PropPreset } from "../hooks/useResourceProps";
 import type { LLMConfig } from "./chat/types";
 import { copyToClipboard } from "@/client/utils/browser";
 import { useTheme } from "@/client/context/ThemeContext";
+import { useHostProfile, HOST_PROFILE_LIST } from "@/client/fork/host-profiles"; // fork: feat 01 import host profile hook
 import { IframeConsole } from "./IframeConsole";
 import { PropsConfigDialog } from "./resources/PropsConfigDialog";
 import { JSONDisplay } from "./shared/JSONDisplay";
@@ -200,6 +201,7 @@ export function MCPAppsDebugControls({
   requiredProps,
 }: MCPAppsDebugControlsProps) {
   const { resolvedTheme, setTheme } = useTheme();
+  const { activeProfileId, activeProfile, setActiveProfileId } = useHostProfile(); // fork: feat 01 read host profile
   const { playground, updatePlaygroundSettings, widgets, clearCspViolations } =
     useWidgetDebug();
   const widget = widgets.get(toolCallId);
@@ -412,6 +414,32 @@ export function MCPAppsDebugControls({
           </Tooltip>
         </>
       )}
+
+      {/* Host Profile Picker */}
+      <Tooltip> {/* fork: feat 01 host profile picker */}
+        <TooltipTrigger
+          render={
+            <div className="relative inline-flex items-center">
+              <select
+                data-testid="debugger-host-profile-select"
+                aria-label="Host Profile"
+                value={activeProfileId}
+                onChange={(e) => setActiveProfileId(e.target.value as any)}
+                className="h-8 pl-2 pr-6 text-xs font-medium rounded-md border border-input bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm shadow-sm hover:bg-white dark:hover:bg-zinc-900 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {HOST_PROFILE_LIST.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1.5 size-3 text-muted-foreground" />
+            </div>
+          }
+          nativeButton
+        />
+        <TooltipContent>Host Profile: {activeProfile.label}</TooltipContent>
+      </Tooltip>
 
       {/* Device Emulation */}
       <DropdownMenu>

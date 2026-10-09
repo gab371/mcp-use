@@ -18,6 +18,7 @@ import { InspectorProvider, useInspector } from "./context/InspectorContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ShapeProvider } from "@/client/lib/shape-context";
 import { WidgetDebugProvider } from "./context/WidgetDebugContext";
+import { HostProfileProvider } from "./fork/host-profiles"; // fork: feat 01 provide host profile context
 import { getPackageVersion, initInspectorTelemetry } from "@/client/telemetry";
 import { getInspectorBase } from "./utils/basePath";
 import {
@@ -128,7 +129,8 @@ function App() {
   return (
     <ThemeProvider forcedTheme={forcedTheme || undefined}>
       <ShapeProvider defaultShape="pill">
-        <WidgetDebugProvider>
+        <HostProfileProvider> {/* fork: feat 01 mount host profile provider */}
+          <WidgetDebugProvider>
           <McpClientProvider
             storageProvider={storageProvider}
             enableRpcLogging={true}
@@ -305,6 +307,7 @@ function App() {
             </InspectorProvider>
           </McpClientProvider>
         </WidgetDebugProvider>
+        </HostProfileProvider>
       </ShapeProvider>
     </ThemeProvider>
   );
