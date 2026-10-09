@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { RunResult, RunSummary } from "@/client/fork/evals/engine/verdict";
-import { parseSuiteYaml } from "@/client/fork/evals/engine/suite";
 
 const DEFAULT_EXAMPLE_SUITE = `# Reference suite (tool routing).
 name: Tool routing
@@ -85,12 +84,15 @@ export class EvalsStorage {
       try {
         const content = await fs.readFile(fullPath, "utf-8");
         const stat = await fs.stat(fullPath);
-        const parsed = parseSuiteYaml(content);
+        const nameMatch = content.match(/^name:\s*(.+)$/m);
+        const name = nameMatch ? nameMatch[1].trim().replace(/^['"]|['"]$/g, "") : id;
+        const caseMatches = content.match(/^\s*-\s*id:\s*(.+)$/gm);
+        const caseCount = caseMatches ? caseMatches.length : 0;
         suites.push({
           id,
-          name: parsed.suite?.name || id,
+          name,
           yaml: content,
-          caseCount: parsed.suite?.cases.length || 0,
+          caseCount,
           updatedAt: stat.mtimeMs,
         });
       } catch {
