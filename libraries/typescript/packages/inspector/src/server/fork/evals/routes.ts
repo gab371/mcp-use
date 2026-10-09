@@ -12,18 +12,30 @@ export function createEvalRoutes(storage: EvalsStorage = new EvalsStorage()): Ho
     return c.json({ suites });
   });
 
-  // Get suite by id
-  router.get("/suites/:id", async (c) => {
-    const id = c.req.param("id");
-    const yaml = await storage.getSuite(id);
-    if (yaml === null) {
+  // Get suite by id (or golden file: /suites/:id/golden/:file)
+  router.get("/suites/:id{.+}", async (c) => {
+    const rawId = c.req.param("id");
+
+    if (rawId.includes("/golden/")) {
+      const idx = rawId.indexOf("/golden/");
+      const suiteId = rawId.slice(0, idx);
+      const relPath = rawId.slice(idx + 1); // "golden/..."
+      const content = await storage.getGoldenFile(suiteId, relPath);
+      if (content === null) {
+        return c.json({ error: "Golden file not found" }, 404);
+      }
+      return c.text(content);
+    }
+
+    const detail = await storage.getSuiteDetail(rawId);
+    if (!detail) {
       return c.json({ error: "Suite not found" }, 404);
     }
-    return c.json({ id, yaml });
+    return c.json(detail);
   });
 
   // Save suite draft by id
-  router.put("/suites/:id", async (c) => {
+  router.put("/suites/:id{.+}", async (c) => {
     const id = c.req.param("id");
     const body = await c.req.json<{ yaml: string }>();
     if (!body || typeof body.yaml !== "string") {

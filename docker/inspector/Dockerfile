@@ -32,8 +32,13 @@ WORKDIR /app
 COPY --from=builder /repo/libraries/typescript/packages/inspector/dist ./dist
 COPY --from=builder /repo/libraries/typescript/packages/inspector/package.json ./package.json
 
+<<<<<<< HEAD
 # Copy default eval suites
 RUN mkdir -p .evals/suites .evals/runs
+=======
+# Copy default eval suites and golden datasets
+COPY .evals ./.evals
+>>>>>>> a7483b2b (feat(evals): implement golden tool results and golden answers with modular suites)
 
 # Copy entrypoint script
 COPY docker/inspector/entrypoint.sh /entrypoint.sh

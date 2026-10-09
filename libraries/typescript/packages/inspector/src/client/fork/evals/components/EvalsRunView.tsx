@@ -30,6 +30,7 @@ export function EvalsRunView({
   const [suites, setSuites] = useState<Array<{ id: string; name: string; yaml: string }>>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<string>("");
   const [currentSuite, setCurrentSuite] = useState<EvalSuite | null>(null);
+  const [goldenFiles, setGoldenFiles] = useState<Record<string, string>>({});
 
   // Execution states
   const [isRunning, setIsRunning] = useState(false);
@@ -42,6 +43,24 @@ export function EvalsRunView({
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const loadSuiteDetails = async (suiteId: string) => {
+    try {
+      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
+      if (res.ok) {
+        const detail = await res.json();
+        setGoldenFiles(detail.goldenFiles || {});
+        if (detail.yaml) {
+          const parsed = parseSuiteYaml(detail.yaml);
+          if (parsed.success && parsed.suite) {
+            setCurrentSuite(parsed.suite);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load suite detail:", e);
+    }
+  };
+
   // Load available suites from server
   useEffect(() => {
     fetch("/inspector/api/fork/evals/suites")
@@ -49,11 +68,9 @@ export function EvalsRunView({
       .then((data) => {
         if (data.suites?.length > 0) {
           setSuites(data.suites);
-          setSelectedSuiteId(data.suites[0].id);
-          const parsed = parseSuiteYaml(data.suites[0].yaml);
-          if (parsed.success && parsed.suite) {
-            setCurrentSuite(parsed.suite);
-          }
+          const firstId = data.suites[0].id;
+          setSelectedSuiteId(firstId);
+          loadSuiteDetails(firstId);
         }
       })
       .catch((e) => console.warn("Failed to load suites:", e));
@@ -61,13 +78,7 @@ export function EvalsRunView({
 
   const handleSuiteChange = (suiteId: string) => {
     setSelectedSuiteId(suiteId);
-    const found = suites.find((s) => s.id === suiteId);
-    if (found) {
-      const parsed = parseSuiteYaml(found.yaml);
-      if (parsed.success && parsed.suite) {
-        setCurrentSuite(parsed.suite);
-      }
-    }
+    loadSuiteDetails(suiteId);
   };
 
   const handleStartRun = async () => {
@@ -126,10 +137,11 @@ export function EvalsRunView({
             {
               signal: abortController.signal,
               runId,
+              resolvedGolden: goldenFiles,
             }
           );
 
-          const iterResult = evaluateIteration(iter, caseDef, transcript);
+          const iterResult = evaluateIteration(iter, caseDef, transcript, goldenFiles);
           iterations.push(iterResult);
         }
 
@@ -198,11 +210,18 @@ export function EvalsRunView({
             </select>
           </div>
 
-          <div className="text-xs text-muted-foreground border-l border-border/60 pl-3">
-            <span>Model: </span>
-            <span className="font-semibold text-foreground">
-              {llmConfig?.provider || "none"}:{llmConfig?.model || "not configured"}
-            </span>
+          <div className="text-xs text-muted-foreground border-l border-border/60 pl-3 flex items-center gap-2">
+            <div>
+              <span>Model: </span>
+              <span className="font-semibold text-foreground">
+                {llmConfig?.provider || "none"}:{llmConfig?.model || "not configured"}
+              </span>
+            </div>
+            {Object.keys(goldenFiles).length > 0 && (
+              <span className="rounded bg-primary/10 text-primary text-[10px] px-2 py-0.5 font-medium border border-primary/20">
+                {Object.keys(goldenFiles).filter((k) => !k.startsWith("golden/")).length} golden assets
+              </span>
+            )}
           </div>
         </div>
 
@@ -334,7 +353,7 @@ export function EvalsRunView({
 
               {/* Prompts preview */}
               <div className="text-[11px] text-muted-foreground/80 font-mono bg-muted/20 p-2 rounded truncate">
-                Prompt: {caseDef.prompts.join(" → ")}
+                Prompt: {caseDef.prompts && caseDef.prompts.length > 0 ? caseDef.prompts.join(" → ") : (caseDef.promptFile ? `File: ${caseDef.promptFile}` : "(No prompt)")}
               </div>
 
               {/* Expanded transcript and check evaluations */}

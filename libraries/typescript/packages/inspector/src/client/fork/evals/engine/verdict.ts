@@ -77,7 +77,8 @@ export interface RunResult extends RunSummary {
 export function evaluateIteration(
   iterationIndex: number,
   caseDef: EvalCase,
-  transcript: Transcript
+  transcript: Transcript,
+  resolvedGolden?: Record<string, string>
 ): IterationResult {
   if (transcript.isInconclusive || transcript.error) {
     return {
@@ -90,7 +91,11 @@ export function evaluateIteration(
     };
   }
 
-  const { passed, results, failedChecks } = evaluateAllChecks(caseDef.expect, transcript);
+  const { passed, results, failedChecks } = evaluateAllChecks(
+    caseDef.expect,
+    transcript,
+    resolvedGolden
+  );
 
   return {
     iterationIndex,

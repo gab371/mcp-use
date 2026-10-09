@@ -87,4 +87,42 @@ describe("evals server routes and storage", () => {
     expect(getData.run.id).toBe("run-test-1");
     expect(getData.run.status).toBe("passed");
   });
+
+  it("handles modular suites and golden asset resolution", async () => {
+    // Create modular structure in tmpDir: demo/attractions/attractions.yaml + golden/explorer.result.json
+    const suiteDir = path.join(tmpDir, "demo", "attractions");
+    const goldenDir = path.join(suiteDir, "golden");
+    await fs.mkdir(goldenDir, { recursive: true });
+
+    const modularYaml = `name: Demo Attractions Modular\ncases:\n  - id: kids\n    prompts: test\n    expect:\n      - noToolError: true\n`;
+    await fs.writeFile(path.join(suiteDir, "attractions.yaml"), modularYaml, "utf-8");
+
+    const goldenJson = JSON.stringify({ items: [{ name: "Adventure Tour" }] });
+    await fs.writeFile(path.join(goldenDir, "explorer.result.json"), goldenJson, "utf-8");
+
+    // 1. Check listSuites
+    const listRes = await app.request("/api/suites");
+    expect(listRes.status).toBe(200);
+    const listData = await listRes.json<{ suites: any[] }>();
+    const found = listData.suites.find((s) => s.id === "demo/attractions");
+    expect(found).toBeDefined();
+    expect(found.mcpName).toBe("demo");
+    expect(found.evalName).toBe("attractions");
+    expect(found.goldenFilesCount).toBe(1);
+
+    // 2. Check getSuiteDetail
+    const detailRes = await app.request("/api/suites/demo/attractions");
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json<{ id: string; goldenFiles: Record<string, string> }>();
+    expect(detail.id).toBe("demo/attractions");
+    expect(detail.goldenFiles["golden/explorer.result.json"]).toBe(goldenJson);
+    expect(detail.goldenFiles["explorer.result.json"]).toBe(goldenJson);
+
+    // 3. Check direct golden file route
+    const rawRes = await app.request("/api/suites/demo/attractions/golden/explorer.result.json");
+    expect(rawRes.status).toBe(200);
+    const rawText = await rawRes.text();
+    expect(rawText).toBe(goldenJson);
+  });
 });
+

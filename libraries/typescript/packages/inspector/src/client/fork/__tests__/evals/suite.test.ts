@@ -101,4 +101,42 @@ cases:
     expect(result.success).toBe(false);
     expect(result.error).toContain("YAML syntax error");
   });
+
+  it("successfully parses suite with promptFile, goldenResult, and goldenAnswer", () => {
+    const yaml = `
+name: Golden Tests
+cases:
+  - id: golden-case-1
+    promptFile: golden/kids-prompt.md
+    expect:
+      - goldenResult:
+          tool: explorer
+          file: golden/kids.result.json
+          match: partial
+      - goldenAnswer:
+          file: golden/kids.answer.md
+          match: similarity
+          threshold: 0.75
+`;
+    const result = parseSuiteYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.suite?.cases[0].promptFile).toBe("golden/kids-prompt.md");
+    expect(result.suite?.cases[0].expect[0].goldenResult?.tool).toBe("explorer");
+    expect(result.suite?.cases[0].expect[0].goldenResult?.match).toBe("partial");
+    expect(result.suite?.cases[0].expect[1].goldenAnswer?.threshold).toBe(0.75);
+  });
+
+  it("rejects case missing both prompts and promptFile", () => {
+    const yaml = `
+name: Missing Prompts
+cases:
+  - id: bad-case
+    expect:
+      - noToolError: true
+`;
+    const result = parseSuiteYaml(yaml);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Case must have either prompts or promptFile defined");
+  });
 });
+

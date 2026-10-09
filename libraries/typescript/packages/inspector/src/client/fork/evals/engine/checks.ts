@@ -26,6 +26,9 @@ export interface CheckResult {
   checkName: string;
   pass: boolean;
   reason?: string;
+  score?: number;
+  goldenExpected?: unknown;
+  actualReceived?: unknown;
 }
 
 /**
@@ -115,9 +118,152 @@ function containsForbiddenString(value: unknown, forbiddenLower: string[]): bool
 }
 
 /**
+ * Recursively checks if an actual data structure matches an expected subset.
+ */
+export function isDeepSubset(
+  actual: unknown,
+  expected: unknown
+): { pass: boolean; reason?: string } {
+  if (expected === actual) return { pass: true };
+
+  if (expected === null || expected === undefined) {
+    return { pass: actual === expected, reason: `Expected ${expected}, got ${actual}` };
+  }
+
+  if (typeof expected !== "object") {
+    const pass = String(actual) === String(expected);
+    return {
+      pass,
+      reason: pass ? undefined : `Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    };
+  }
+
+  // Array comparison
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual)) {
+      return { pass: false, reason: `Expected array, got ${typeof actual}` };
+    }
+    for (let i = 0; i < expected.length; i++) {
+      const expItem = expected[i];
+      const found = actual.some((actItem) => isDeepSubset(actItem, expItem).pass);
+      if (!found) {
+        return {
+          pass: false,
+          reason: `Array element at index ${i} not found in actual array: ${JSON.stringify(expItem)}`,
+        };
+      }
+    }
+    return { pass: true };
+  }
+
+  // Object comparison
+  if (typeof actual !== "object" || actual === null || Array.isArray(actual)) {
+    return { pass: false, reason: `Expected object, got ${Array.isArray(actual) ? "array" : typeof actual}` };
+  }
+
+  const actObj = actual as Record<string, unknown>;
+  const expObj = expected as Record<string, unknown>;
+
+  for (const [key, expVal] of Object.entries(expObj)) {
+    if (!(key in actObj)) {
+      return { pass: false, reason: `Missing key "${key}" in actual object` };
+    }
+    const child = isDeepSubset(actObj[key], expVal);
+    if (!child.pass) {
+      return { pass: false, reason: `Key "${key}": ${child.reason}` };
+    }
+  }
+
+  return { pass: true };
+}
+
+/**
+ * Evaluates whether an MCP tool call result matches expected golden data.
+ */
+export function evaluateToolResultMatch(
+  actual: unknown,
+  expected: unknown,
+  mode: "partial" | "exact" | "contains" = "partial"
+): { pass: boolean; reason?: string } {
+  let unwrappedActual = actual;
+  if (
+    actual &&
+    typeof actual === "object" &&
+    Array.isArray((actual as any).content) &&
+    (actual as any).content.length > 0
+  ) {
+    const firstContent = (actual as any).content[0];
+    if (firstContent && firstContent.type === "text" && typeof firstContent.text === "string") {
+      try {
+        unwrappedActual = JSON.parse(firstContent.text);
+      } catch {
+        unwrappedActual = firstContent.text;
+      }
+    }
+  }
+
+  if (mode === "exact") {
+    const pass = JSON.stringify(unwrappedActual) === JSON.stringify(expected);
+    return {
+      pass,
+      reason: pass ? undefined : "Tool result does not match expected result exactly",
+    };
+  }
+
+  if (mode === "contains") {
+    if (typeof unwrappedActual === "string" && typeof expected === "string") {
+      const pass = unwrappedActual.includes(expected);
+      return { pass, reason: pass ? undefined : `Tool result string did not contain "${expected}"` };
+    }
+    if (Array.isArray(unwrappedActual)) {
+      const pass = unwrappedActual.some((item) => isDeepSubset(item, expected).pass);
+      return { pass, reason: pass ? undefined : "Array does not contain expected element" };
+    }
+  }
+
+  return isDeepSubset(unwrappedActual, expected);
+}
+
+/**
+ * Computes token-overlap text similarity (Dice-Sørensen coefficient) between 0.0 and 1.0.
+ */
+export function computeTextSimilarity(actualText: string, expectedText: string): number {
+  const tokenize = (str: string) =>
+    str
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const tokens1 = tokenize(actualText);
+  const tokens2 = tokenize(expectedText);
+
+  if (tokens1.length === 0 && tokens2.length === 0) return 1.0;
+  if (tokens1.length === 0 || tokens2.length === 0) return 0.0;
+
+  const freq1 = new Map<string, number>();
+  for (const t of tokens1) freq1.set(t, (freq1.get(t) || 0) + 1);
+
+  let intersection = 0;
+  for (const t of tokens2) {
+    const count = freq1.get(t) || 0;
+    if (count > 0) {
+      intersection++;
+      freq1.set(t, count - 1);
+    }
+  }
+
+  return (2 * intersection) / (tokens1.length + tokens2.length);
+}
+
+/**
  * Executes a single check against a transcript.
  */
-export function evaluateCheck(check: EvalCheckConfig, transcript: Transcript): CheckResult {
+export function evaluateCheck(
+  check: EvalCheckConfig,
+  transcript: Transcript,
+  resolvedGolden?: Record<string, string>
+): CheckResult {
   const calls = transcript.toolCalls;
 
   // 1. toolCalled
@@ -148,7 +294,143 @@ export function evaluateCheck(check: EvalCheckConfig, transcript: Transcript): C
       }
     }
 
+    if (check.goldenResult !== undefined) {
+      const goldenCfg =
+        typeof check.goldenResult === "string"
+          ? { file: check.goldenResult, match: "partial" as const }
+          : check.goldenResult;
+
+      let expectedData: unknown = goldenCfg.content;
+      if (expectedData === undefined && goldenCfg.file) {
+        const raw = resolvedGolden?.[goldenCfg.file];
+        if (raw !== undefined) {
+          try {
+            expectedData = JSON.parse(raw);
+          } catch {
+            expectedData = raw;
+          }
+        }
+      }
+
+      if (expectedData === undefined) {
+        return {
+          checkName: `toolCalled: ${target} with goldenResult`,
+          pass: false,
+          reason: `Golden result reference could not be resolved: ${goldenCfg.file || "no content"}`,
+        };
+      }
+
+      const matchMode = goldenCfg.match ?? "partial";
+      let bestMismatchReason = "No result matched golden expectation";
+      let matchedCall: ToolCallRecord | undefined;
+
+      for (const call of matchingToolCalls) {
+        const checkSub = evaluateToolResultMatch(call.result, expectedData, matchMode);
+        if (checkSub.pass) {
+          matchedCall = call;
+          break;
+        } else {
+          bestMismatchReason = checkSub.reason || bestMismatchReason;
+        }
+      }
+
+      if (!matchedCall) {
+        return {
+          checkName: `toolCalled: ${target} with goldenResult`,
+          pass: false,
+          reason: `Tool "${target}" result did not match golden expectation (${matchMode}): ${bestMismatchReason}`,
+          goldenExpected: expectedData,
+          actualReceived: matchingToolCalls[0]?.result,
+        };
+      }
+
+      return {
+        checkName: `toolCalled: ${target} with goldenResult`,
+        pass: true,
+        goldenExpected: expectedData,
+        actualReceived: matchedCall.result,
+      };
+    }
+
     return { checkName: `toolCalled: ${target}`, pass: true };
+  }
+
+  // Standalone goldenResult check
+  if (check.goldenResult !== undefined) {
+    const goldenCfg =
+      typeof check.goldenResult === "string"
+        ? { file: check.goldenResult, match: "partial" as const }
+        : check.goldenResult;
+
+    const targetTool = goldenCfg.tool;
+    const targetCalls = targetTool ? calls.filter((c) => c.name === targetTool) : calls;
+
+    if (targetTool && targetCalls.length === 0) {
+      return {
+        checkName: `goldenResult: ${targetTool}`,
+        pass: false,
+        reason: `Expected tool "${targetTool}" to be called for golden result evaluation, but it was not called.`,
+      };
+    }
+
+    if (targetCalls.length === 0) {
+      return {
+        checkName: "goldenResult",
+        pass: false,
+        reason: "No tool calls found in transcript to evaluate golden result against.",
+      };
+    }
+
+    let expectedData: unknown = goldenCfg.content;
+    if (expectedData === undefined && goldenCfg.file) {
+      const raw = resolvedGolden?.[goldenCfg.file];
+      if (raw !== undefined) {
+        try {
+          expectedData = JSON.parse(raw);
+        } catch {
+          expectedData = raw;
+        }
+      }
+    }
+
+    if (expectedData === undefined) {
+      return {
+        checkName: `goldenResult${targetTool ? `: ${targetTool}` : ""}`,
+        pass: false,
+        reason: `Golden result reference could not be resolved: ${goldenCfg.file || "no content"}`,
+      };
+    }
+
+    const matchMode = goldenCfg.match ?? "partial";
+    let bestMismatchReason = "No result matched golden expectation";
+    let matchedCall: ToolCallRecord | undefined;
+
+    for (const call of targetCalls) {
+      const checkSub = evaluateToolResultMatch(call.result, expectedData, matchMode);
+      if (checkSub.pass) {
+        matchedCall = call;
+        break;
+      } else {
+        bestMismatchReason = checkSub.reason || bestMismatchReason;
+      }
+    }
+
+    if (!matchedCall) {
+      return {
+        checkName: `goldenResult${targetTool ? `: ${targetTool}` : ""}`,
+        pass: false,
+        reason: `Tool result did not match golden expectation (${matchMode}): ${bestMismatchReason}`,
+        goldenExpected: expectedData,
+        actualReceived: targetCalls[0]?.result,
+      };
+    }
+
+    return {
+      checkName: `goldenResult${targetTool ? `: ${targetTool}` : ""}`,
+      pass: true,
+      goldenExpected: expectedData,
+      actualReceived: matchedCall.result,
+    };
   }
 
   // 2. toolNotCalled
@@ -305,6 +587,87 @@ export function evaluateCheck(check: EvalCheckConfig, transcript: Transcript): C
     }
   }
 
+  // 11. goldenAnswer
+  if (check.goldenAnswer !== undefined) {
+    const goldenCfg =
+      typeof check.goldenAnswer === "string"
+        ? { file: check.goldenAnswer, match: "similarity" as const, threshold: 0.75 }
+        : check.goldenAnswer;
+
+    let expectedText = goldenCfg.text;
+    if (!expectedText && goldenCfg.file && resolvedGolden) {
+      expectedText = resolvedGolden[goldenCfg.file];
+    }
+
+    if (!expectedText) {
+      return {
+        checkName: "goldenAnswer",
+        pass: false,
+        reason: `Golden answer reference could not be resolved: ${goldenCfg.file || "no text"}`,
+      };
+    }
+
+    const matchMode = goldenCfg.match ?? "similarity";
+    const actualText = transcript.finalText || "";
+
+    if (matchMode === "exact") {
+      const pass = actualText.trim() === expectedText.trim();
+      return {
+        checkName: "goldenAnswer (exact)",
+        pass,
+        reason: pass ? undefined : "Final answer did not match golden answer exactly.",
+        goldenExpected: expectedText,
+        actualReceived: actualText,
+      };
+    }
+
+    if (matchMode === "contains") {
+      const pass = actualText.toLowerCase().includes(expectedText.toLowerCase().trim());
+      return {
+        checkName: "goldenAnswer (contains)",
+        pass,
+        reason: pass ? undefined : "Final answer did not contain expected golden text.",
+        goldenExpected: expectedText,
+        actualReceived: actualText,
+      };
+    }
+
+    if (matchMode === "regex") {
+      try {
+        const regex = new RegExp(expectedText, goldenCfg.ignoreCase !== false ? "i" : "");
+        const pass = regex.test(actualText);
+        return {
+          checkName: "goldenAnswer (regex)",
+          pass,
+          reason: pass ? undefined : `Final answer did not match regex /${expectedText}/.`,
+          goldenExpected: expectedText,
+          actualReceived: actualText,
+        };
+      } catch (err) {
+        return {
+          checkName: "goldenAnswer (regex)",
+          pass: false,
+          reason: `Invalid regex pattern in golden answer: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    }
+
+    // Default: "similarity"
+    const threshold = goldenCfg.threshold ?? 0.75;
+    const score = computeTextSimilarity(actualText, expectedText);
+    const pass = score >= threshold;
+    return {
+      checkName: `goldenAnswer (similarity: ${(score * 100).toFixed(0)}% >= ${(threshold * 100).toFixed(0)}%)`,
+      pass,
+      score,
+      reason: pass
+        ? undefined
+        : `Answer similarity score of ${(score * 100).toFixed(1)}% is below threshold of ${(threshold * 100).toFixed(1)}%.`,
+      goldenExpected: expectedText,
+      actualReceived: actualText,
+    };
+  }
+
   return { checkName: "unknown-check", pass: true };
 }
 
@@ -313,13 +676,14 @@ export function evaluateCheck(check: EvalCheckConfig, transcript: Transcript): C
  */
 export function evaluateAllChecks(
   checks: EvalCheckConfig[],
-  transcript: Transcript
+  transcript: Transcript,
+  resolvedGolden?: Record<string, string>
 ): {
   passed: boolean;
   results: CheckResult[];
   failedChecks: CheckResult[];
 } {
-  const results = checks.map((c) => evaluateCheck(c, transcript));
+  const results = checks.map((c) => evaluateCheck(c, transcript, resolvedGolden));
   const failedChecks = results.filter((r) => !r.pass);
   return {
     passed: failedChecks.length === 0,

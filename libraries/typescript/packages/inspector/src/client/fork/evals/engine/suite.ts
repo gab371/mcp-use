@@ -2,6 +2,35 @@ import yaml from "yaml";
 import { z } from "zod";
 
 /**
+ * Golden result expectation for a tool call.
+ */
+export const GoldenResultCheckSchema = z
+  .object({
+    tool: z.string().optional(),
+    file: z.string().optional(),
+    content: z.unknown().optional(),
+    match: z.enum(["partial", "exact", "contains"]).optional().default("partial"),
+  })
+  .strict();
+
+export type GoldenResultCheck = z.infer<typeof GoldenResultCheckSchema>;
+
+/**
+ * Golden answer expectation for the agent's final response.
+ */
+export const GoldenAnswerCheckSchema = z
+  .object({
+    file: z.string().optional(),
+    text: z.string().optional(),
+    match: z.enum(["similarity", "contains", "exact", "regex"]).optional().default("similarity"),
+    threshold: z.number().min(0).max(1).optional().default(0.75),
+    ignoreCase: z.boolean().optional().default(true),
+  })
+  .strict();
+
+export type GoldenAnswerCheck = z.infer<typeof GoldenAnswerCheckSchema>;
+
+/**
  * Expected check definition in a test case.
  * Unknown keys are strictly disallowed.
  */
@@ -10,6 +39,7 @@ export const EvalCheckSchema = z
     toolCalled: z.string().optional(),
     args: z.record(z.string(), z.unknown()).optional(),
     match: z.enum(["partial", "exact"]).optional().default("partial"),
+    goldenResult: z.union([z.string(), GoldenResultCheckSchema]).optional(),
     toolNotCalled: z.string().optional(),
     onlyTools: z.array(z.string()).optional(),
     firstTool: z.string().optional(),
@@ -19,6 +49,7 @@ export const EvalCheckSchema = z
     argsNeverContain: z.array(z.string()).optional(),
     answerContains: z.string().optional(),
     answerMatches: z.string().optional(),
+    goldenAnswer: z.union([z.string(), GoldenAnswerCheckSchema]).optional(),
   })
   .strict();
 
@@ -49,7 +80,9 @@ export const EvalCaseSchema = z
     description: z.string().optional(),
     prompts: z
       .union([z.string().min(1), z.array(z.string().min(1))])
-      .transform((val) => (Array.isArray(val) ? val : [val])),
+      .transform((val) => (Array.isArray(val) ? val : [val]))
+      .optional(),
+    promptFile: z.string().optional(),
     iterations: z.number().int().positive().optional(),
     passThreshold: z.number().min(0).max(1).optional(),
     temperature: z.number().min(0).max(2).optional(),
@@ -58,7 +91,11 @@ export const EvalCaseSchema = z
     timeoutMs: z.number().int().positive().optional(),
     expect: z.array(EvalCheckSchema).min(1, "Case must have at least one expect check"),
   })
-  .strict();
+  .strict()
+  .refine(
+    (val) => (val.prompts && val.prompts.length > 0) || Boolean(val.promptFile),
+    { message: "Case must have either prompts or promptFile defined" }
+  );
 
 export type EvalCase = z.infer<typeof EvalCaseSchema>;
 

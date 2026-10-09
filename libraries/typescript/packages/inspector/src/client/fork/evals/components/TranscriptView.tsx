@@ -28,8 +28,42 @@ export function TranscriptView({ iteration }: { iteration: IterationResult }) {
               >
                 <span>{check.pass ? "✓" : "✗"}</span>
                 <div className="flex-1">
-                  <div className="font-semibold">{check.checkName}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{check.checkName}</span>
+                    {check.score !== undefined && (
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted/70 font-mono">
+                        Similarity: {(check.score * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
                   {check.reason && <div className="text-[11px] opacity-90 mt-0.5">{check.reason}</div>}
+
+                  {(check.goldenExpected !== undefined || check.actualReceived !== undefined) && (
+                    <div className="mt-2 space-y-1.5 pt-1.5 border-t border-border/30 font-mono">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]">
+                        <div className="rounded bg-background/80 p-2 border border-border/50">
+                          <div className="text-muted-foreground uppercase font-sans font-semibold mb-1">
+                            Golden Expected
+                          </div>
+                          <pre className="overflow-x-auto max-h-48 whitespace-pre-wrap text-[11px]">
+                            {typeof check.goldenExpected === "string"
+                              ? check.goldenExpected
+                              : JSON.stringify(check.goldenExpected, null, 2)}
+                          </pre>
+                        </div>
+                        <div className="rounded bg-background/80 p-2 border border-border/50">
+                          <div className="text-muted-foreground uppercase font-sans font-semibold mb-1">
+                            Actual Received
+                          </div>
+                          <pre className="overflow-x-auto max-h-48 whitespace-pre-wrap text-[11px]">
+                            {typeof check.actualReceived === "string"
+                              ? check.actualReceived
+                              : JSON.stringify(check.actualReceived, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -16,6 +16,7 @@ export interface RunCaseOptions {
   signal?: AbortSignal;
   runId?: string;
   timeoutMs?: number;
+  resolvedGolden?: Record<string, string>;
 }
 
 /**
@@ -117,7 +118,20 @@ export async function runCase(
     // Multi-turn conversation support across caseDef.prompts
     const conversationMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-    for (const prompt of caseDef.prompts) {
+    const effectivePrompts: string[] = [];
+    if (caseDef.prompts && caseDef.prompts.length > 0) {
+      effectivePrompts.push(...caseDef.prompts);
+    } else if (caseDef.promptFile && options.resolvedGolden?.[caseDef.promptFile]) {
+      effectivePrompts.push(options.resolvedGolden[caseDef.promptFile]);
+    }
+
+    if (effectivePrompts.length === 0) {
+      throw new Error(
+        `Case "${caseDef.id}" has no executable prompts (promptFile "${caseDef.promptFile || ""}" could not be resolved)`
+      );
+    }
+
+    for (const prompt of effectivePrompts) {
       if (abortController.signal.aborted) break;
 
       conversationMessages.push({ role: "user", content: prompt });
