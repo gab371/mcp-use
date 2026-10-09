@@ -24,7 +24,7 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 scripts/fork-update.sh <inspector-tag>   # fetch, rebase, build, specs, list hooks
 ```
 
-Last update: 2026-10-07, initial base on `@mcp-use/inspector@20.3.15`, took ~15s, conflicts: none.
+Last update: 2026-10-07, rebase onto `@mcp-use/inspector@20.3.15`, took 0m 21s (21s), conflicts: none.
 
 ## Build
 
