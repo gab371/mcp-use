@@ -185,7 +185,9 @@ conf.yaml
 .claude
 .plans/
 TODO.md
+.study/
 
 # Local pnpm store
 .pnpm-store/
 .mcp-use/
+.evals/

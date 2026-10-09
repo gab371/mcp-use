@@ -101,11 +101,12 @@ registerInspectorProxyRoutes(app, {
   oauthProxyAllowLoopback: allowLoopback,
 });
 
+mountEvalRoutes(app); // fork: feat 02 mount evals API routes
+
 registerInspectorShell(app, {
   inspectorMode: "standalone",
   manufactChatUrl: process.env.MANUFACT_CHAT_URL,
 });
-mountEvalRoutes(app); // fork: feat 02 mount evals API routes
 
 async function startServer() {
   try {
