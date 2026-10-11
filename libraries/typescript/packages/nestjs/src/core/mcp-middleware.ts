@@ -84,12 +84,27 @@ export class McpMiddleware implements NestMiddleware {
       (pathname === `${basePath}/inspector` ||
         pathname.startsWith(`${basePath}/inspector/`))
     ) {
+      if (req.originalUrl) {
+        req.url = req.originalUrl;
+      }
       await this.inspectorHandler(req, res, req.body);
       return;
     }
 
-    // 2. Check if matching MCP Server route
-    if (pathname === basePath || pathname.startsWith(`${basePath}/`)) {
+    // 2. Check if matching MCP Server route (explicit basePath or root fallback)
+    const isMcpRoute = pathname === basePath || pathname.startsWith(`${basePath}/`);
+    const isRootMcpFallback = pathname === '/' && (
+      req.method === 'POST' ||
+      req.method === 'OPTIONS' ||
+      req.method === 'GET'
+    );
+
+    if (isMcpRoute || isRootMcpFallback) {
+      if (isRootMcpFallback) {
+        req.url = `${basePath}${req.url === '/' ? '' : req.url}`;
+      } else if (req.originalUrl) {
+        req.url = req.originalUrl;
+      }
       await this.nodeHandler(req, res, req.body);
       return;
     }
