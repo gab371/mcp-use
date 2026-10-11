@@ -1,15 +1,17 @@
 diff --git a/dist/index.js b/dist/index.js
+index 97f36e8..6f0119a 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -428,4 +428,21 @@ function stringifyName(name, next) {
+@@ -428,4 +428,24 @@ function stringifyName(name, next) {
+     }
      return name;
  }
 +function compatPathToRegexp(path, keysOrOptions, options) {
 +    if (Array.isArray(keysOrOptions)) {
-+        const opts = options || {};
++        var opts = options || {};
 +        try {
-+            const res = pathToRegexp(path, opts);
-+            keysOrOptions.push(...res.keys);
++            var res = pathToRegexp(path, opts);
++            keysOrOptions.push.apply(keysOrOptions, res.keys);
 +            return res.regexp;
 +        } catch (e) {
 +            if (path === "/*" || path === "*" || path === "(.*)" || (typeof path === "string" && path.endsWith("/*"))) {
@@ -25,3 +27,4 @@ diff --git a/dist/index.js b/dist/index.js
 +compatPathToRegexp.pathToRegexp = compatPathToRegexp;
 +module.exports = compatPathToRegexp;
  //# sourceMappingURL=index.js.map
+\ No newline at end of file
