@@ -1,0 +1,53 @@
+{
+  "host": "claude",
+  "capturedAt": "2026-10-07T12:00:00.000Z",
+  "initializeResult": {
+    "protocolVersion": "2024-11-05",
+    "hostInfo": {
+      "name": "claude-ai",
+      "version": "0.1.0"
+    },
+    "hostCapabilities": {
+      "openLink": {}
+    },
+    "hostContext": {
+      "availableDisplayModes": ["inline", "fullscreen"],
+      "platform": "web",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Claude/1.0",
+      "toolInfo": true,
+      "containerDimensions": {
+        "maxWidth": 768
+      },
+      "safeAreaInsets": {
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      },
+      "styles": {
+        "variables": {
+          "--color-background-primary": "#FAF9F5",
+          "--color-background-secondary": "#F3F1EB",
+          "--color-background-tertiary": "#E8E5DE",
+          "--color-background-inverse": "#1F1E1D",
+          "--color-text-primary": "#1F1E1D",
+          "--color-text-secondary": "#6B6860",
+          "--color-text-tertiary": "#8F8C82",
+          "--color-text-inverse": "#FAF9F5",
+          "--color-border-primary": "#E5E2DA",
+          "--color-border-secondary": "#D4D0C5",
+          "--color-border-tertiary": "#C2BDAF",
+          "--font-sans": "\"Anthropic Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+          "--border-radius-sm": "4px",
+          "--border-radius-md": "8px",
+          "--border-radius-lg": "12px"
+        },
+        "css": {
+          "fonts": "@font-face{font-family:\"Anthropic Sans\";src:local(\"Anthropic Sans\"),local(\"system-ui\");font-display:swap;}"
+        }
+      }
+    }
+  },
+  "windowOpenai": null,
+  "acceptedDisplayModes": ["inline", "fullscreen"]
+}
