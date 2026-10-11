@@ -44,4 +44,8 @@ if [ "$BUILD_FLAG" = "true" ] || [ ! -f "$INSPECTOR_CLI" ] || [ ! -f "${ROOT_DIR
 fi
 
 echo "🚀 Starting MCP Inspector on http://localhost:${PORT}/inspector"
-exec node "$INSPECTOR_CLI" --port "$PORT" "${ARGS[@]}"
+if [ ${#ARGS[@]} -gt 0 ]; then
+  exec node "$INSPECTOR_CLI" --port "$PORT" "${ARGS[@]}"
+else
+  exec node "$INSPECTOR_CLI" --port "$PORT"
+fi
