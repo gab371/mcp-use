@@ -45,6 +45,11 @@
   <br /><br />
 </div>
 
+> [!TIP]
+> **Extended Fork (`fork/main`)**  
+> This repository is an enhanced fork of `mcp-use`: automated evaluation testbench (**Evals**), client host emulation (**Host Profiles** for ChatGPT & Claude), enterprise OAuth support (**Okta / Confidential Clients**), and fully self-contained isolation without external cloud dependencies.  
+> 📖 [Read the complete fork documentation →](docs/fork/README.md)
+
 > [!NOTE]
 > **Migrating from v1? Give it to your agent:**
 >

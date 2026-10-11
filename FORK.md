@@ -1,8 +1,13 @@
 # FORK.md — Extended fork of mcp-use
 
+> 📖 **Complete Fork Documentation:** See the [`docs/fork/`](docs/fork/README.md) directory for comprehensive user and developer guides:
+> - 🧪 [Evaluations Guide (Evals)](docs/fork/evals.md)
+> - 🎭 [Host Profiles Guide](docs/fork/host-profiles.md)
+> - 🔐 [Enterprise OAuth & Confidential Clients Guide](docs/fork/oauth.md)
+
 ## Why this fork
 
-Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02), no Manufact cloud (chore 02), shared deployment (tech 01).
+Enhanced mcp-use inspector with: host profiles (feat 01), evals (feat 02), no Manufact cloud (chore 02), confidential OAuth clients for Okta/enterprise (feat 04), containerized deployment (tech 01).
 
 ## Rules
 
@@ -19,7 +24,7 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 
 | File | What the hook does | Plan |
 | ---- | ------------------ | ---- |
-| `libraries/typescript/packages/inspector/src/client/App.tsx` | Provide HostProfileContext and wrap transport with active host metadata | feat 01 |
+| `libraries/typescript/packages/inspector/src/client/App.tsx` | Provide HostProfileContext and wrap transport with active host metadata (feat 01); sync confidential client secrets (feat 04) | feat 01, feat 04 |
 | `libraries/typescript/packages/inspector/src/client/components/HostedUserMenu.tsx` | Render null to hide Manufact user avatar/menu | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/components/Layout.tsx` | Validate evals tab parameter | feat 02 |
 | `libraries/typescript/packages/inspector/src/client/components/LayoutContent.tsx` | Register evals in ALL_KNOWN_TABS and mount EvalsTab | feat 02 |
@@ -34,9 +39,10 @@ Internal, shared mcp-use inspector with: host profiles (feat 01), evals (feat 02
 | `libraries/typescript/packages/inspector/src/client/context/InspectorContext.tsx` | Disable fallback to `cloud.manufact.com` and disable free-tier upgrade prompts (chore 02); register evals in TabType (feat 02) | chore 02, feat 02 |
 | `libraries/typescript/packages/inspector/src/client/hooks/useMcpAppsHostContext.ts` | Overlay profile hostContext via `applyHostProfile` | feat 01 |
 | `libraries/typescript/packages/inspector/src/client/hooks/useViewHostProps.tsx` | Pass profile hostInfo, hostCapabilities, and openaiShim | feat 01 |
-| `libraries/typescript/packages/inspector/src/server/cli.ts` | Mount evals API routes | feat 02 |
-| `libraries/typescript/packages/inspector/src/server/create-dev-api-app.ts` | Mount evals API routes in dev mode | feat 02 |
+| `libraries/typescript/packages/inspector/src/server/cli.ts` | Mount evals API routes (feat 02); mount static oauth client routes (feat 04) | feat 02, feat 04 |
+| `libraries/typescript/packages/inspector/src/server/create-dev-api-app.ts` | Mount evals API routes in dev mode (feat 02); mount static oauth client routes (feat 04) | feat 02, feat 04 |
 | `libraries/typescript/packages/inspector/src/server/inspector-shell.ts` | Default anonymized telemetry to false | chore 02 |
+| `libraries/typescript/packages/inspector/src/server/proxy/oauth-proxy.ts` | Fall back to static client in applyConfidentialClientAuthentication and export canonicalUrl | feat 04 |
 
 `git grep -n "fork:"` must list exactly these lines.
 
