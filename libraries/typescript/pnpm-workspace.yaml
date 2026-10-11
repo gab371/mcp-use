@@ -17,6 +17,7 @@ catalog:
 onlyBuiltDependencies:
   - "@tailwindcss/oxide"
   - esbuild
+  - "@nestjs/core"
 
 # Block installing npm releases newer than 3 days (value is minutes) to
 # blunt supply-chain attacks where a malicious version is yanked within
@@ -125,6 +126,7 @@ overrides:
   smol-toml: ^1.7.1
 
 allowBuilds:
+  '@nestjs/core': true
   "@tailwindcss/oxide": true
   esbuild: true
   # protobufjs only checks dependency version conventions during postinstall.

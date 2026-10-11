@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "baseUrl": ".",
+    "paths": {
+      "@mcp-use/nestjs": ["../../../libraries/typescript/packages/nestjs/dist/index.d.ts"],
+      "@nestjs/common": ["../../../libraries/typescript/node_modules/.pnpm/node_modules/@nestjs/common/index.d.ts"],
+      "@nestjs/core": ["../../../libraries/typescript/node_modules/.pnpm/node_modules/@nestjs/core/index.d.ts"],
+      "@nestjs/platform-express": ["../../../libraries/typescript/node_modules/.pnpm/node_modules/@nestjs/platform-express/index.d.ts"],
+      "zod": ["../../../libraries/typescript/node_modules/.pnpm/node_modules/zod/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}
