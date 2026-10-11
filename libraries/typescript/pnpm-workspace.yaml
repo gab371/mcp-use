@@ -141,3 +141,4 @@ patchedDependencies:
   # OAuth provider 1.7 emits `items?: undefined` in its OpenAPI schema union.
   # Accept that in Better Call's types with exactOptionalPropertyTypes enabled.
   better-call@1.4.0: patches/better-call@1.4.0.patch
+  path-to-regexp@8.4.2: patches/path-to-regexp@8.4.2.patch

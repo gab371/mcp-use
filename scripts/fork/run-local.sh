@@ -91,6 +91,8 @@ if [ -n "$MCP_EXAMPLE" ]; then
     exit 1
   fi
 
+  EXAMPLE_DIR="$(cd -P "$EXAMPLE_DIR" && pwd)"
+
   echo "🎬 Starting MCP Example '${MCP_EXAMPLE}' on port ${MCP_EXAMPLE_PORT}..."
   (cd "$EXAMPLE_DIR" && pnpm with current dev) &
   MCP_PID=$!

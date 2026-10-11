@@ -1,0 +1,27 @@
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -428,4 +428,21 @@ function stringifyName(name, next) {
+     return name;
+ }
++function compatPathToRegexp(path, keysOrOptions, options) {
++    if (Array.isArray(keysOrOptions)) {
++        const opts = options || {};
++        try {
++            const res = pathToRegexp(path, opts);
++            keysOrOptions.push(...res.keys);
++            return res.regexp;
++        } catch (e) {
++            if (path === "/*" || path === "*" || path === "(.*)" || (typeof path === "string" && path.endsWith("/*"))) {
++                keysOrOptions.push({ name: "0", prefix: "/", delimiter: "/", optional: true, repeat: false, pattern: ".*" });
++                return opts.end === false ? /^(?:\/(.*))(?:\/|$)/i : /^(?:\/(.*))\/?$/i;
++            }
++            throw e;
++        }
++    }
++    return pathToRegexp(path, keysOrOptions);
++}
++Object.assign(compatPathToRegexp, exports);
++compatPathToRegexp.pathToRegexp = compatPathToRegexp;
++module.exports = compatPathToRegexp;
+ //# sourceMappingURL=index.js.map
