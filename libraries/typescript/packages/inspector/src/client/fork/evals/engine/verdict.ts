@@ -47,6 +47,8 @@ export interface RunPerformance {
 
 export interface RunSummary {
   id: string;
+  /** Suite id (e.g. `my-mcp/faq`); missing on runs recorded before feat 05. */
+  suiteId?: string;
   suiteName: string;
   status: RunVerdictStatus;
   startedAt: number;

@@ -35,7 +35,7 @@ for arg in "$@"; do
   fi
 done
 
-if [ "$BUILD_FLAG" = "true" ] || [ ! -f "$INSPECTOR_CLI" ]; then
+if [ "$BUILD_FLAG" = "true" ] || [ ! -f "$INSPECTOR_CLI" ] || [ ! -f "${ROOT_DIR}/libraries/typescript/packages/inspector/dist/app/inspector.js.gz" ]; then
   echo "📦 Building packages..."
   export NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false
   pnpm --dir "${ROOT_DIR}/libraries/typescript" --filter @mcp-use/client build

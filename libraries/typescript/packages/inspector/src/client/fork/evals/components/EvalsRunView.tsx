@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { McpServer } from "@mcp-use/client/react";
 import type { LLMConfig } from "@/client/components/chat/types";
 import { parseSuiteYaml, type EvalSuite } from "../engine/suite";
@@ -13,10 +13,13 @@ import {
 } from "../engine/verdict";
 import { hashToolsSnapshot } from "../engine/snapshot";
 import { TranscriptView } from "./TranscriptView";
+import { groupByScope, isSuiteInScope } from "../scope";
 
 interface EvalsRunViewProps {
   connection?: McpServer;
   llmConfig?: LLMConfig | null;
+  /** feat 05: suite folders in scope; empty = all suites. */
+  folders?: string[];
   onNavigateToHistory?: () => void;
   onNavigateToEditor?: () => void;
 }
@@ -24,6 +27,7 @@ interface EvalsRunViewProps {
 export function EvalsRunView({
   connection,
   llmConfig,
+  folders = [],
   onNavigateToHistory,
   onNavigateToEditor,
 }: EvalsRunViewProps) {
@@ -65,16 +69,22 @@ export function EvalsRunView({
   useEffect(() => {
     fetch("/inspector/api/fork/evals/suites")
       .then((res) => res.json())
-      .then((data) => {
-        if (data.suites?.length > 0) {
-          setSuites(data.suites);
-          const firstId = data.suites[0].id;
-          setSelectedSuiteId(firstId);
-          loadSuiteDetails(firstId);
-        }
-      })
+      .then((data) => setSuites(data.suites || []))
       .catch((e) => console.warn("Failed to load suites:", e));
   }, []);
+
+  const visibleSuites = suites.filter((s) => isSuiteInScope(s.id, folders));
+  const visibleIds = visibleSuites.map((s) => s.id).join("|");
+
+  // Keep the selection inside the scope
+  useEffect(() => {
+    if (visibleSuites.some((s) => s.id === selectedSuiteId)) return;
+    const first = visibleSuites[0]?.id ?? "";
+    setSelectedSuiteId(first);
+    if (first) loadSuiteDetails(first);
+    else setCurrentSuite(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIds]);
 
   const handleSuiteChange = (suiteId: string) => {
     setSelectedSuiteId(suiteId);
@@ -152,17 +162,20 @@ export function EvalsRunView({
 
       if (!abortController.signal.aborted) {
         const completedAt = Date.now();
-        const runResult = computeRunResult({
-          runId,
-          suiteName: currentSuite.name,
-          caseResults: evaluatedCases,
-          startedAt,
-          completedAt,
-          model: llmConfig.model,
-          provider: llmConfig.provider,
-          toolsSnapshot,
-          toolsSnapshotHash: snapshotHash,
-        });
+        const runResult = {
+          ...computeRunResult({
+            runId,
+            suiteName: currentSuite.name,
+            caseResults: evaluatedCases,
+            startedAt,
+            completedAt,
+            model: llmConfig.model,
+            provider: llmConfig.provider,
+            toolsSnapshot,
+            toolsSnapshotHash: snapshotHash,
+          }),
+          suiteId: selectedSuiteId,
+        };
 
         setCompletedRun(runResult);
 
@@ -202,10 +215,15 @@ export function EvalsRunView({
               onChange={(e) => handleSuiteChange(e.target.value)}
               className="rounded border border-input bg-background px-3 py-1.5 text-xs focus:ring-1 focus:ring-ring"
             >
-              {suites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.id})
-                </option>
+              {visibleSuites.length === 0 && <option value="">No suite in scope</option>}
+              {groupByScope(visibleSuites).map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.suites.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.id})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>

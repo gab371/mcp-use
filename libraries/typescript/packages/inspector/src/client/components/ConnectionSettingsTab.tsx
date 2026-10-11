@@ -12,6 +12,7 @@ import { tabHeaderIconClass } from "./shared/ListTabHeader";
 import { Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
+import { EvalScopeSettingsCard } from "@/client/fork/evals"; // fork: feat 05 import eval scope card
 
 interface ConnectionSettingsTabProps {
   connection: McpServer;
@@ -82,6 +83,8 @@ export function ConnectionSettingsTab({
           inlineSections
           cardSections
         />
+        {/* fork: feat 05 eval suites scope */}
+        <EvalScopeSettingsCard serverId={connection.id} />
       </div>
     </div>
   );

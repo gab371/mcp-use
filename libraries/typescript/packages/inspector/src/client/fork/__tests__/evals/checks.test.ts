@@ -209,6 +209,133 @@ describe("evaluateCheck (all 10 checks from checks.md)", () => {
         transcriptMcpContent
       ).pass
     ).toBe(true);
+
+    // Multi-part content with plain text summary followed by serialized JSON
+    const transcriptMultiPart: Transcript = {
+      toolCalls: [
+        {
+          name: "explorer",
+          args: {},
+          result: {
+            _meta: { ui: { resourceUri: "ui://widget.html" } },
+            content: [
+              { type: "text", text: "Found 42 results (market: en-gb)." },
+              { type: "text", text: '{"market":"en-gb","items":[{"id":"A1","name":"Ride"}]}' },
+            ],
+          },
+          isError: false,
+        },
+      ],
+      finalText: "Done",
+    };
+
+    // Matches against the serialized JSON inside content[1]
+    expect(
+      evaluateCheck(
+        {
+          goldenResult: {
+            tool: "explorer",
+            content: { items: [{ id: "A1" }] },
+            match: "partial",
+          },
+        },
+        transcriptMultiPart
+      ).pass
+    ).toBe(true);
+
+    // Matches against root _meta
+    expect(
+      evaluateCheck(
+        {
+          goldenResult: {
+            tool: "explorer",
+            content: { _meta: { ui: { resourceUri: "ui://widget.html" } } },
+            match: "partial",
+          },
+        },
+        transcriptMultiPart
+      ).pass
+    ).toBe(true);
+
+    // When matching fails against an object, reason should be informative and not "Expected object, got string"
+    const failedCheck = evaluateCheck(
+      {
+        goldenResult: {
+          tool: "explorer",
+          content: { _meta: { missing: true } },
+          match: "partial",
+        },
+      },
+      transcriptMultiPart
+    );
+    expect(failedCheck.pass).toBe(false);
+    expect(failedCheck.reason).toContain('Missing key "missing"');
+    expect(failedCheck.reason).not.toContain("Expected object, got string");
+
+    // Golden result with any-uuid wildcard
+    const transcriptUuid: Transcript = {
+      toolCalls: [
+        {
+          name: "explorer",
+          args: {},
+          result: {
+            _meta: {
+              analytics: {
+                id: "d7c79801-c89b-41a3-a29d-31029cb10290",
+                tool: "explorer",
+              },
+            },
+          },
+          isError: false,
+        },
+      ],
+      finalText: "Done",
+    };
+
+    expect(
+      evaluateCheck(
+        {
+          goldenResult: {
+            tool: "explorer",
+            content: {
+              _meta: {
+                analytics: {
+                  id: "any-uuid",
+                  tool: "explorer",
+                },
+              },
+            },
+            match: "partial",
+          },
+        },
+        transcriptUuid
+      ).pass
+    ).toBe(true);
+
+    // Fails if expected uuid is not valid uuid format
+    const transcriptBadUuid: Transcript = {
+      toolCalls: [
+        {
+          name: "explorer",
+          args: {},
+          result: { _meta: { analytics: { id: "not-a-uuid" } } },
+          isError: false,
+        },
+      ],
+      finalText: "Done",
+    };
+    expect(
+      evaluateCheck(
+        {
+          goldenResult: {
+            tool: "explorer",
+            content: { _meta: { analytics: { id: "any-uuid" } } },
+            match: "partial",
+          },
+        },
+        transcriptBadUuid
+      ).pass
+    ).toBe(false);
   });
 
   it("12. goldenAnswer (similarity and text matching)", () => {

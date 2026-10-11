@@ -25,6 +25,7 @@ Enhanced mcp-use inspector with: host profiles (feat 01), evals (feat 02), no Ma
 | File | What the hook does | Plan |
 | ---- | ------------------ | ---- |
 | `libraries/typescript/packages/inspector/src/client/App.tsx` | Provide HostProfileContext and wrap transport with active host metadata (feat 01); sync confidential client secrets (feat 04) | feat 01, feat 04 |
+| `libraries/typescript/packages/inspector/src/client/components/ConnectionSettingsTab.tsx` | Render EvalScopeSettingsCard under connection settings form | feat 05 |
 | `libraries/typescript/packages/inspector/src/client/components/HostedUserMenu.tsx` | Render null to hide Manufact user avatar/menu | chore 02 |
 | `libraries/typescript/packages/inspector/src/client/components/Layout.tsx` | Validate evals tab parameter | feat 02 |
 | `libraries/typescript/packages/inspector/src/client/components/LayoutContent.tsx` | Register evals in ALL_KNOWN_TABS and mount EvalsTab | feat 02 |

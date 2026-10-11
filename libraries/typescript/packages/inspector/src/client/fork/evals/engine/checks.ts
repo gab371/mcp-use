@@ -39,6 +39,10 @@ function matchesValue(actual: unknown, expected: unknown): boolean {
   if (expected === "any-string") {
     return typeof actual === "string";
   }
+  if (expected === "any-uuid") {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return typeof actual === "string" && uuidRegex.test(actual);
+  }
   if (expected === "any-number") {
     return typeof actual === "number" && !Number.isNaN(actual);
   }
@@ -131,6 +135,27 @@ export function isDeepSubset(
   }
 
   if (typeof expected !== "object") {
+    if (expected === "any") {
+      const pass = actual !== undefined && actual !== null;
+      return { pass, reason: pass ? undefined : `Expected any non-null value, got ${actual}` };
+    }
+    if (expected === "any-string") {
+      const pass = typeof actual === "string";
+      return { pass, reason: pass ? undefined : `Expected any string, got ${typeof actual}` };
+    }
+    if (expected === "any-uuid") {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const pass = typeof actual === "string" && uuidRegex.test(actual);
+      return {
+        pass,
+        reason: pass ? undefined : `Expected valid UUID string, got ${JSON.stringify(actual)}`,
+      };
+    }
+    if (expected === "any-number") {
+      const pass = typeof actual === "number" && !Number.isNaN(actual);
+      return { pass, reason: pass ? undefined : `Expected any number, got ${typeof actual}` };
+    }
+
     const pass = String(actual) === String(expected);
     return {
       pass,
@@ -179,49 +204,89 @@ export function isDeepSubset(
 
 /**
  * Evaluates whether an MCP tool call result matches expected golden data.
+ * Tests multiple candidate interpretations:
+ * 1. `actual` directly as-is (e.g. root CallToolResult with _meta and content)
+ * 2. Parsed JSON from each text block in `actual.content`
+ * 3. Text content or data fields in `actual.content`
  */
 export function evaluateToolResultMatch(
   actual: unknown,
   expected: unknown,
   mode: "partial" | "exact" | "contains" = "partial"
 ): { pass: boolean; reason?: string } {
-  let unwrappedActual = actual;
-  if (
-    actual &&
-    typeof actual === "object" &&
-    Array.isArray((actual as any).content) &&
-    (actual as any).content.length > 0
-  ) {
-    const firstContent = (actual as any).content[0];
-    if (firstContent && firstContent.type === "text" && typeof firstContent.text === "string") {
-      try {
-        unwrappedActual = JSON.parse(firstContent.text);
-      } catch {
-        unwrappedActual = firstContent.text;
+  const candidates: unknown[] = [actual];
+
+  if (actual && typeof actual === "object") {
+    const content = (actual as { content?: unknown }).content;
+    if (Array.isArray(content)) {
+      for (const item of content) {
+        if (item && typeof item === "object") {
+          if (item.type === "text" && typeof item.text === "string") {
+            try {
+              candidates.push(JSON.parse(item.text));
+            } catch {
+              candidates.push(item.text);
+            }
+          } else if ("data" in item) {
+            candidates.push((item as any).data);
+          }
+        }
       }
     }
   }
 
-  if (mode === "exact") {
-    const pass = JSON.stringify(unwrappedActual) === JSON.stringify(expected);
-    return {
-      pass,
-      reason: pass ? undefined : "Tool result does not match expected result exactly",
-    };
+  const testCandidate = (candidate: unknown): { pass: boolean; reason?: string } => {
+    if (mode === "exact") {
+      const pass = JSON.stringify(candidate) === JSON.stringify(expected);
+      return {
+        pass,
+        reason: pass ? undefined : "Tool result does not match expected result exactly",
+      };
+    }
+
+    if (mode === "contains") {
+      if (typeof candidate === "string" && typeof expected === "string") {
+        const pass = candidate.includes(expected);
+        return { pass, reason: pass ? undefined : `Tool result string did not contain "${expected}"` };
+      }
+      if (Array.isArray(candidate)) {
+        const pass = candidate.some((item) => isDeepSubset(item, expected).pass);
+        return { pass, reason: pass ? undefined : "Array does not contain expected element" };
+      }
+    }
+
+    return isDeepSubset(candidate, expected);
+  };
+
+  let bestFailure: { pass: boolean; reason?: string } | undefined;
+
+  for (const candidate of candidates) {
+    const res = testCandidate(candidate);
+    if (res.pass) {
+      return res;
+    }
+
+    if (!bestFailure) {
+      bestFailure = res;
+    } else {
+      const expIsObj = typeof expected === "object" && expected !== null;
+      const candIsObj = typeof candidate === "object" && candidate !== null;
+      const bestWasTypeMismatch = bestFailure.reason?.startsWith("Expected object, got");
+
+      if (expIsObj && candIsObj && bestWasTypeMismatch) {
+        bestFailure = res;
+      } else if (
+        res.reason &&
+        bestFailure.reason &&
+        res.reason.includes("Key ") &&
+        !bestFailure.reason.includes("Key ")
+      ) {
+        bestFailure = res;
+      }
+    }
   }
 
-  if (mode === "contains") {
-    if (typeof unwrappedActual === "string" && typeof expected === "string") {
-      const pass = unwrappedActual.includes(expected);
-      return { pass, reason: pass ? undefined : `Tool result string did not contain "${expected}"` };
-    }
-    if (Array.isArray(unwrappedActual)) {
-      const pass = unwrappedActual.some((item) => isDeepSubset(item, expected).pass);
-      return { pass, reason: pass ? undefined : "Array does not contain expected element" };
-    }
-  }
-
-  return isDeepSubset(unwrappedActual, expected);
+  return bestFailure ?? { pass: false, reason: "No tool result matched" };
 }
 
 /**

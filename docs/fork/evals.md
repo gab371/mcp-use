@@ -150,3 +150,20 @@ The Inspector UI includes a dedicated **Evals** tab:
 4. **History & Comparison (History View):**
    - Browse previous test runs saved in `.evals/runs/`.
    - Track pass rates across commits and pinpoint regressions immediately.
+
+---
+
+## 7. Per-MCP Evaluation Scope (Eval Scope)
+
+When managing multiple MCP servers, you can associate each connection with dedicated evaluation suite directories:
+
+1. **Configuration in Connection Settings:**
+   - Under the **Connection Settings** tab, the **Evaluation Suites** card allows configuring:
+     - **Default suite folder:** Default folder for this MCP (e.g. `catalog`). New suites created here will automatically default to `catalog/<name>`.
+     - **Other suite folders:** Additional folders included in scope (e.g. `discovery, shared`).
+2. **Contextual Filtering in the Evals Tab:**
+   - By default, the Evals tab displays **only** suites belonging to the active server's scope (`catalog/*`) alongside **global** suites (`.evals/suites/*.yaml` or `global/*`).
+   - A header toggle button allows switching immediately to **"All suites"** to view the entire catalogue without filtering.
+   - Dropdown menus cleanly group suites into `MCP suites` and `Global suites`.
+3. **Targeted Creation:**
+   - The **"+ New Suite"** button pre-selects the MCP's default folder, ensuring new test suites and golden assets are stored in the proper directory.

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { parseSuiteYaml, type EvalSuite } from "../engine/suite";
+import { groupByScope, isSuiteInScope } from "../scope";
 
 interface SuiteMeta {
   id: string;
@@ -8,10 +9,21 @@ interface SuiteMeta {
   caseCount: number;
 }
 
+/** "My FAQ suite" -> "my-faq-suite" */
+function slugify(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 export function SuiteEditorView({
   onSelectSuite,
+  folders = [],
+  createFolders = [],
 }: {
   onSelectSuite?: (suite: EvalSuite, yaml: string) => void;
+  /** feat 05: suite folders in scope; empty = all suites. */
+  folders?: string[];
+  /** feat 05: folders offered for new suites, default folder first. */
+  createFolders?: string[];
 }) {
   const [suites, setSuites] = useState<SuiteMeta[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<string>("");
@@ -33,6 +45,9 @@ export function SuiteEditorView({
   const [isCreatingGolden, setIsCreatingGolden] = useState(false);
   const [newGoldenName, setNewGoldenName] = useState("");
   const [newGoldenType, setNewGoldenType] = useState<"result" | "answer">("result");
+
+  // New suite creator (feat 05)
+  const [newSuite, setNewSuite] = useState<{ folder: string; name: string } | null>(null);
 
   const parsed = parseSuiteYaml(yamlContent);
 
@@ -70,12 +85,6 @@ export function SuiteEditorView({
       if (res.ok) {
         const data = await res.json();
         setSuites(data.suites || []);
-        if (data.suites?.length > 0 && !selectedSuiteId) {
-          const firstId = data.suites[0].id;
-          setSelectedSuiteId(firstId);
-          setYamlContent(data.suites[0].yaml);
-          fetchSuiteDetails(firstId);
-        }
       }
     } catch (e) {
       console.warn("Failed to fetch suites:", e);
@@ -85,6 +94,20 @@ export function SuiteEditorView({
   useEffect(() => {
     fetchSuites();
   }, []);
+
+  const visibleSuites = suites.filter((s) => isSuiteInScope(s.id, folders));
+  const visibleIds = visibleSuites.map((s) => s.id).join("|");
+  const isUnsavedDraft = !!selectedSuiteId && !suites.some((s) => s.id === selectedSuiteId);
+
+  // Keep the selection inside the scope (an unsaved new suite stays selected)
+  useEffect(() => {
+    if (isUnsavedDraft || visibleSuites.some((s) => s.id === selectedSuiteId)) return;
+    const first = visibleSuites[0];
+    setSelectedSuiteId(first?.id ?? "");
+    setYamlContent(first?.yaml ?? "");
+    if (first) fetchSuiteDetails(first.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIds]);
 
   const handleSelect = (id: string) => {
     setSelectedSuiteId(id);
@@ -122,15 +145,19 @@ export function SuiteEditorView({
     }
   };
 
-  const handleNew = () => {
-    const newId = `suite-${Date.now().toString(36)}`;
-    const template = `name: New Eval Suite\ndefaults:\n  iterations: 1\n  passThreshold: 1.0\n  temperature: 0\n  maxSteps: 5\ncases:\n  - id: sample-case-1\n    prompts:\n      - "Hello"\n    expect:\n      - noToolError: true\n`;
+  const handleCreateSuite = () => {
+    if (!newSuite) return;
+    const slug = slugify(newSuite.name);
+    if (!slug) return;
+    const newId = newSuite.folder ? `${newSuite.folder}/${slug}` : slug;
+    const template = `name: ${newSuite.name.trim()}\ndefaults:\n  iterations: 1\n  passThreshold: 1.0\n  temperature: 0\n  maxSteps: 5\ncases:\n  - id: sample-case-1\n    prompts:\n      - "Hello"\n    expect:\n      - noToolError: true\n`;
     setSelectedSuiteId(newId);
     setYamlContent(template);
     setGoldenFiles({});
     setSelectedGoldenFile("");
     setGoldenContent("");
     setActiveTab("yaml");
+    setNewSuite(null);
   };
 
   const handleDownload = () => {
@@ -254,18 +281,74 @@ export function SuiteEditorView({
             value={selectedSuiteId}
             onChange={(e) => handleSelect(e.target.value)}
           >
-            {suites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.id})
-              </option>
+            {isUnsavedDraft && <option value={selectedSuiteId}>{selectedSuiteId} (unsaved)</option>}
+            {visibleSuites.length === 0 && !isUnsavedDraft && (
+              <option value="">No suite in scope</option>
+            )}
+            {groupByScope(visibleSuites).map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.suites.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.id})
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
-          <button
-            onClick={handleNew}
-            className="rounded border border-border bg-muted/60 px-2.5 py-1 text-xs hover:bg-muted font-medium transition-colors"
-          >
-            + New Suite
-          </button>
+          {newSuite ? (
+            <form
+              className="flex items-center gap-1.5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreateSuite();
+              }}
+            >
+              {createFolders.length > 0 && (
+                <select
+                  data-testid="new-suite-folder"
+                  className="rounded border border-input bg-background px-2 py-1 text-xs"
+                  value={newSuite.folder}
+                  onChange={(e) => setNewSuite({ ...newSuite, folder: e.target.value })}
+                >
+                  {createFolders.map((f) => (
+                    <option key={f} value={f}>
+                      {f}/
+                    </option>
+                  ))}
+                  <option value="">(global)</option>
+                </select>
+              )}
+              <input
+                autoFocus
+                data-testid="new-suite-name"
+                placeholder="suite name"
+                className="rounded border border-input bg-background px-2 py-1 text-xs w-36"
+                value={newSuite.name}
+                onChange={(e) => setNewSuite({ ...newSuite, name: e.target.value })}
+              />
+              <button
+                type="submit"
+                disabled={!slugify(newSuite.name)}
+                className="rounded bg-primary px-2.5 py-1 text-xs text-primary-foreground font-medium disabled:opacity-50"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewSuite(null)}
+                className="rounded px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={() => setNewSuite({ folder: createFolders[0] ?? "", name: "" })}
+              className="rounded border border-border bg-muted/60 px-2.5 py-1 text-xs hover:bg-muted font-medium transition-colors"
+            >
+              + New Suite
+            </button>
+          )}
         </div>
 
         {/* View Switcher Tabs */}

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { RunResult, RunSummary } from "../engine/verdict";
 import { diffToolSnapshots, type ToolDiff } from "../engine/snapshot";
 import { TranscriptView } from "./TranscriptView";
+import { isSuiteInScope } from "../scope";
 
-export function EvalsHistoryView() {
-  const [runs, setRuns] = useState<RunSummary[]>([]);
+export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
+  const [allRuns, setRuns] = useState<RunSummary[]>([]);
+  const runs = allRuns.filter((r) => !r.suiteId || isSuiteInScope(r.suiteId, folders));
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [activeRunDetail, setActiveRunDetail] = useState<RunResult | null>(null);
   const [compareRunId, setCompareRunId] = useState<string | null>(null);
@@ -123,7 +125,9 @@ export function EvalsHistoryView() {
                     }}
                   >
                     <div className="flex items-center justify-between text-xs font-medium">
-                      <span className="truncate font-semibold">{run.suiteName}</span>
+                      <span className="truncate font-semibold" title={run.suiteId}>
+                        {run.suiteName}
+                      </span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase border ${statusColor}`}>
                         {run.status}
                       </span>
