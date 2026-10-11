@@ -14,6 +14,7 @@ import {
 import { hashToolsSnapshot } from "../engine/snapshot";
 import { TranscriptView } from "./TranscriptView";
 import { groupByScope, isSuiteInScope } from "../scope";
+import { inspectorApi } from "@/client/utils/basePath";
 
 interface EvalsRunViewProps {
   connection?: McpServer;
@@ -49,7 +50,7 @@ export function EvalsRunView({
 
   const loadSuiteDetails = async (suiteId: string) => {
     try {
-      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
+      const res = await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}`));
       if (res.ok) {
         const detail = await res.json();
         setGoldenFiles(detail.goldenFiles || {});
@@ -67,7 +68,7 @@ export function EvalsRunView({
 
   // Load available suites from server
   useEffect(() => {
-    fetch("/inspector/api/fork/evals/suites")
+    fetch(inspectorApi("fork/evals/suites"))
       .then((res) => res.json())
       .then((data) => setSuites(data.suites || []))
       .catch((e) => console.warn("Failed to load suites:", e));
@@ -180,7 +181,7 @@ export function EvalsRunView({
         setCompletedRun(runResult);
 
         // Save run to server
-        fetch("/inspector/api/fork/evals/runs", {
+        fetch(inspectorApi("fork/evals/runs"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(runResult),

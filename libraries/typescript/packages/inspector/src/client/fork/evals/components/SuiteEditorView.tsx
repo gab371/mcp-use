@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { parseSuiteYaml, type EvalSuite } from "../engine/suite";
 import { groupByScope, isSuiteInScope } from "../scope";
+import { inspectorApi } from "@/client/utils/basePath";
 
 interface SuiteMeta {
   id: string;
@@ -53,7 +54,7 @@ export function SuiteEditorView({
 
   const fetchSuiteDetails = async (id: string) => {
     try {
-      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(id)}`);
+      const res = await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(id)}`));
       if (res.ok) {
         const detail = await res.json();
         const files: Record<string, string> = {};
@@ -81,7 +82,7 @@ export function SuiteEditorView({
 
   const fetchSuites = async () => {
     try {
-      const res = await fetch("/inspector/api/fork/evals/suites");
+      const res = await fetch(inspectorApi("fork/evals/suites"));
       if (res.ok) {
         const data = await res.json();
         setSuites(data.suites || []);
@@ -123,7 +124,7 @@ export function SuiteEditorView({
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}`, {
+      const res = await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(selectedSuiteId)}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ yaml: yamlContent }),
@@ -184,7 +185,7 @@ export function SuiteEditorView({
     try {
       const fileNameOnly = selectedGoldenFile.replace(/^golden\//, "");
       const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileNameOnly)}`,
+        inspectorApi(`fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileNameOnly)}`),
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -211,7 +212,7 @@ export function SuiteEditorView({
     try {
       const fileNameOnly = fileKey.replace(/^golden\//, "");
       const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileNameOnly)}`,
+        inspectorApi(`fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileNameOnly)}`),
         {
           method: "DELETE",
         }
@@ -240,7 +241,7 @@ export function SuiteEditorView({
 
     try {
       const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileName)}`,
+        inspectorApi(`fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileName)}`),
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

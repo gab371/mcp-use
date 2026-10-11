@@ -6,6 +6,7 @@ import {
   registerInspectorProxyRoutes,
   type InspectorProxyRoutesConfig,
 } from "./proxy-routes.js";
+import { mountEvalRoutes } from "./fork/evals/index.js"; // fork: feat 02 mount evals routes
 
 /** Web-standard handler returned by {@link mountInspector}. */
 export type InspectorFetchHandler = (
@@ -144,6 +145,7 @@ function registerInspectorRoutes(
   }
 
   registerInspectorProxyRoutes(app, routesConfig, basePath);
+  mountEvalRoutes(app, basePath); // fork: feat 02 mount evals API routes
   registerInspectorShell(
     app,
     {

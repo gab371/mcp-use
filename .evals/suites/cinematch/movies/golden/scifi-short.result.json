@@ -1,0 +1,40 @@
+{
+  "movies": [
+    {
+      "id": "arrival",
+      "title": "Arrival",
+      "year": 2016,
+      "genre": "Sci-Fi",
+      "mood": "Mind-Bending",
+      "runtimeMinutes": 116,
+      "rating": 7.9,
+      "director": "Denis Villeneuve",
+      "cast": [
+        "Amy Adams",
+        "Jeremy Renner",
+        "Forest Whitaker"
+      ],
+      "synopsis": "A linguist is recruited by the military to communicate with alien lifeforms after twelve mysterious spacecraft appear across the world.",
+      "streamingPlatforms": [
+        "Paramount+",
+        "Prime Video"
+      ],
+      "showtimes": [
+        "19:15",
+        "21:40"
+      ],
+      "tagline": "Why are they here?",
+      "posterGradient": [
+        "#1a2a6c",
+        "#b21f1f"
+      ]
+    }
+  ],
+  "matchedCount": 1,
+  "totalCatalogCount": 11,
+  "appliedFilters": {
+    "genre": "Sci-Fi",
+    "maxRuntimeMinutes": 120
+  },
+  "userWatchlistIds": []
+}

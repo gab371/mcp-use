@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { IterationResult } from "../engine/verdict";
 import { addExpectationToSuiteYaml, type EvalCase } from "../engine/suite";
+import { inspectorApi } from "@/client/utils/basePath";
 
 export interface TranscriptViewProps {
   iteration: IterationResult;
@@ -60,7 +61,7 @@ export function TranscriptView({
 
     try {
       const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`,
+        inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`),
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -75,7 +76,7 @@ export function TranscriptView({
       // 3. If no golden check was previously configured in the YAML, update the suite YAML
       if (!existingRelFile && caseId) {
         try {
-          const suiteRes = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
+          const suiteRes = await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}`));
           if (suiteRes.ok) {
             const suiteDetail = await suiteRes.json();
             if (suiteDetail.yaml) {
@@ -86,7 +87,7 @@ export function TranscriptView({
                   match: "partial",
                 },
               });
-              await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`, {
+              await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}`), {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ yaml: updatedYaml }),
@@ -132,7 +133,7 @@ export function TranscriptView({
 
     try {
       const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`,
+        inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`),
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -147,7 +148,7 @@ export function TranscriptView({
       // 2. If no golden answer was previously configured, update the suite YAML
       if (!existingAnswerFile && caseId) {
         try {
-          const suiteRes = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
+          const suiteRes = await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}`));
           if (suiteRes.ok) {
             const suiteDetail = await suiteRes.json();
             if (suiteDetail.yaml) {
@@ -158,7 +159,7 @@ export function TranscriptView({
                   threshold: 0.75,
                 },
               });
-              await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`, {
+              await fetch(inspectorApi(`fork/evals/suites/${encodeURIComponent(suiteId)}`), {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ yaml: updatedYaml }),

@@ -1,0 +1,10 @@
+{
+  "found": true,
+  "movie": {
+    "id": "inception",
+    "title": "Inception",
+    "year": 2010,
+    "director": "Christopher Nolan",
+    "rating": 8.8
+  }
+}

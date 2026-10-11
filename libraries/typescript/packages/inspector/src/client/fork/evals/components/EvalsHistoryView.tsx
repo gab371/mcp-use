@@ -3,6 +3,7 @@ import type { RunResult, RunSummary } from "../engine/verdict";
 import { diffToolSnapshots, type ToolDiff } from "../engine/snapshot";
 import { TranscriptView } from "./TranscriptView";
 import { isSuiteInScope } from "../scope";
+import { inspectorApi } from "@/client/utils/basePath";
 
 export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
   const [allRuns, setRuns] = useState<RunSummary[]>([]);
@@ -16,7 +17,7 @@ export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
   const fetchRuns = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/inspector/api/fork/evals/runs");
+      const res = await fetch(inspectorApi("fork/evals/runs"));
       if (res.ok) {
         const data = await res.json();
         setRuns(data.runs || []);
@@ -34,7 +35,7 @@ export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
 
   const loadRunDetail = async (id: string, target: "active" | "compare") => {
     try {
-      const res = await fetch(`/inspector/api/fork/evals/runs/${id}`);
+      const res = await fetch(inspectorApi(`fork/evals/runs/${id}`));
       if (res.ok) {
         const data = await res.json();
         if (target === "active") setActiveRunDetail(data.run);
