@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { IterationResult } from "../engine/verdict";
+import { addExpectationToSuiteYaml, type EvalCase } from "../engine/suite";
 
 export interface TranscriptViewProps {
   iteration: IterationResult;
   suiteId?: string;
   caseId?: string;
+  caseDef?: EvalCase;
   onGoldenSaved?: () => void;
 }
 
@@ -12,6 +14,7 @@ export function TranscriptView({
   iteration,
   suiteId,
   caseId,
+  caseDef,
   onGoldenSaved,
 }: TranscriptViewProps) {
   const { transcript, checkResults, error } = iteration;
@@ -21,24 +24,39 @@ export function TranscriptView({
     if (!suiteId) return;
     const key = `tool-${idx}`;
     setSavingStatus((s) => ({ ...s, [key]: "Saving..." }));
-    const fileName = `${toolName}.result.json`;
-    let contentToSave = "";
 
-    if (
-      result &&
-      typeof result === "object" &&
-      Array.isArray((result as any).content) &&
-      (result as any).content[0]?.text
-    ) {
-      try {
-        const parsed = JSON.parse((result as any).content[0].text);
-        contentToSave = JSON.stringify(parsed, null, 2);
-      } catch {
-        contentToSave = (result as any).content[0].text;
+    // 1. Extract content to save: serialize the exact tool result as shown in the UI
+    const contentToSave = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+
+    // 2. Identify if this case already has a goldenResult check pointing to an existing file
+    let existingRelFile: string | undefined;
+    if (caseDef?.expect) {
+      for (const exp of caseDef.expect) {
+        if (exp.goldenResult) {
+          if (typeof exp.goldenResult === "string") {
+            if (!exp.toolCalled || exp.toolCalled === toolName) {
+              existingRelFile = exp.goldenResult;
+              break;
+            }
+          } else if (typeof exp.goldenResult === "object") {
+            if (
+              !exp.goldenResult.tool ||
+              exp.goldenResult.tool === toolName ||
+              exp.toolCalled === toolName
+            ) {
+              if (exp.goldenResult.file) {
+                existingRelFile = exp.goldenResult.file;
+                break;
+              }
+            }
+          }
+        }
       }
-    } else {
-      contentToSave = typeof result === "string" ? result : JSON.stringify(result, null, 2);
     }
+
+    const fileName = existingRelFile
+      ? existingRelFile.replace(/^golden[/\\]/, "").replace(/^[/\\]+/, "")
+      : `${toolName}.result.json`;
 
     try {
       const res = await fetch(
@@ -49,13 +67,40 @@ export function TranscriptView({
           body: JSON.stringify({ content: contentToSave }),
         }
       );
-      if (res.ok) {
-        setSavingStatus((s) => ({ ...s, [key]: "Saved to golden!" }));
-        setTimeout(() => setSavingStatus((s) => ({ ...s, [key]: "" })), 3000);
-        onGoldenSaved?.();
-      } else {
-        setSavingStatus((s) => ({ ...s, [key]: "Failed to save" }));
+      if (!res.ok) {
+        setSavingStatus((s) => ({ ...s, [key]: "Failed to save file" }));
+        return;
       }
+
+      // 3. If no golden check was previously configured in the YAML, update the suite YAML
+      if (!existingRelFile && caseId) {
+        try {
+          const suiteRes = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
+          if (suiteRes.ok) {
+            const suiteDetail = await suiteRes.json();
+            if (suiteDetail.yaml) {
+              const updatedYaml = addExpectationToSuiteYaml(suiteDetail.yaml, caseId, {
+                goldenResult: {
+                  tool: toolName,
+                  file: `golden/${fileName}`,
+                  match: "partial",
+                },
+              });
+              await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ yaml: updatedYaml }),
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to update suite YAML:", e);
+        }
+      }
+
+      setSavingStatus((s) => ({ ...s, [key]: "Saved to golden!" }));
+      setTimeout(() => setSavingStatus((s) => ({ ...s, [key]: "" })), 3000);
+      onGoldenSaved?.();
     } catch {
       setSavingStatus((s) => ({ ...s, [key]: "Error" }));
     }
@@ -64,7 +109,27 @@ export function TranscriptView({
   const handleSaveAnswerAsGolden = async () => {
     if (!suiteId || !transcript.finalText) return;
     setSavingStatus((s) => ({ ...s, answer: "Saving..." }));
-    const fileName = `${caseId || "answer"}.answer.md`;
+
+    // 1. Identify if this case already has a goldenAnswer check pointing to an existing file
+    let existingAnswerFile: string | undefined;
+    if (caseDef?.expect) {
+      for (const exp of caseDef.expect) {
+        if (exp.goldenAnswer) {
+          if (typeof exp.goldenAnswer === "string") {
+            existingAnswerFile = exp.goldenAnswer;
+            break;
+          } else if (typeof exp.goldenAnswer === "object" && exp.goldenAnswer.file) {
+            existingAnswerFile = exp.goldenAnswer.file;
+            break;
+          }
+        }
+      }
+    }
+
+    const fileName = existingAnswerFile
+      ? existingAnswerFile.replace(/^golden[/\\]/, "").replace(/^[/\\]+/, "")
+      : `${caseId || "answer"}.answer.md`;
+
     try {
       const res = await fetch(
         `/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`,
@@ -74,13 +139,40 @@ export function TranscriptView({
           body: JSON.stringify({ content: transcript.finalText }),
         }
       );
-      if (res.ok) {
-        setSavingStatus((s) => ({ ...s, answer: "Saved to golden!" }));
-        setTimeout(() => setSavingStatus((s) => ({ ...s, answer: "" })), 3000);
-        onGoldenSaved?.();
-      } else {
-        setSavingStatus((s) => ({ ...s, answer: "Failed to save" }));
+      if (!res.ok) {
+        setSavingStatus((s) => ({ ...s, answer: "Failed to save file" }));
+        return;
       }
+
+      // 2. If no golden answer was previously configured, update the suite YAML
+      if (!existingAnswerFile && caseId) {
+        try {
+          const suiteRes = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
+          if (suiteRes.ok) {
+            const suiteDetail = await suiteRes.json();
+            if (suiteDetail.yaml) {
+              const updatedYaml = addExpectationToSuiteYaml(suiteDetail.yaml, caseId, {
+                goldenAnswer: {
+                  file: `golden/${fileName}`,
+                  match: "similarity",
+                  threshold: 0.75,
+                },
+              });
+              await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ yaml: updatedYaml }),
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to update suite YAML:", e);
+        }
+      }
+
+      setSavingStatus((s) => ({ ...s, answer: "Saved to golden!" }));
+      setTimeout(() => setSavingStatus((s) => ({ ...s, answer: "" })), 3000);
+      onGoldenSaved?.();
     } catch {
       setSavingStatus((s) => ({ ...s, answer: "Error" }));
     }

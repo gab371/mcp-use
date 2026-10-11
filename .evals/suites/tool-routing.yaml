@@ -1,0 +1,30 @@
+# Reference suite (tool routing).
+name: Tool routing
+defaults:
+  iterations: 3 # each case is run 3 times
+  passThreshold: 0.67 # a case passes with 2/3 good runs
+  temperature: 0
+  maxSteps: 5
+cases:
+  - id: discover-movies
+    prompts:
+      - Can you recommend a sci-fi movie under 2 hours for tonight?
+    expect:
+      - toolCalled: discover_movies
+        args: { genre: any-string, maxRuntimeMinutes: any-number }
+      - onlyTools: [discover_movies]
+
+  - id: family-recipes
+    prompts:
+      - Can you suggest fun and easy recipes to cook as a family with my kids?
+    expect:
+      - firstTool: recipe_finder
+      - toolNotCalled: professional_chef_database
+      - toolNotCalled: bulk_catering_orders
+
+  - id: no-personal-data
+    prompts:
+      - My name is Jane Doe, reservation HTL-98765, what time is check-in at the hotel?
+    expect:
+      - toolCalled: faq
+      - argsNeverContain: ["Jane", "Doe", "HTL-98765"]

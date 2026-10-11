@@ -272,6 +272,45 @@ describe("evaluateCheck (all 10 checks from checks.md)", () => {
     expect(failedCheck.reason).toContain('Missing key "missing"');
     expect(failedCheck.reason).not.toContain("Expected object, got string");
 
+    // Golden result matching tool result with structuredContent
+    const transcriptStructured: Transcript = {
+      toolCalls: [
+        {
+          name: "get_movie_details",
+          args: { id: "inception" },
+          result: {
+            content: [{ type: "text", text: "### Inception (2010)\nSome markdown..." }],
+            structuredContent: {
+              found: true,
+              movie: {
+                id: "inception",
+                title: "Inception",
+                year: 2010,
+              },
+            },
+          },
+          isError: false,
+        },
+      ],
+      finalText: "Done",
+    };
+
+    expect(
+      evaluateCheck(
+        {
+          goldenResult: {
+            tool: "get_movie_details",
+            content: {
+              found: true,
+              movie: { id: "inception", title: "Inception" },
+            },
+            match: "partial",
+          },
+        },
+        transcriptStructured
+      ).pass
+    ).toBe(true);
+
     // Golden result with any-uuid wildcard
     const transcriptUuid: Transcript = {
       toolCalls: [

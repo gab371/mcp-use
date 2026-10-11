@@ -175,3 +175,30 @@ export function parseSuiteYaml(yamlText: string): ParseSuiteResult {
     suite: result.data,
   };
 }
+
+/**
+ * Injects a new expectation into a specific test case in the suite YAML,
+ * preserving formatting and existing structure.
+ */
+export function addExpectationToSuiteYaml(
+  yamlText: string,
+  caseId: string,
+  expectation: Record<string, unknown>
+): string {
+  const doc = yaml.parseDocument(yamlText);
+  const cases = doc.get("cases");
+  if (cases && typeof (cases as any).items === "object") {
+    for (const item of (cases as any).items) {
+      if (item && typeof item.get === "function" && item.get("id") === caseId) {
+        const expect = item.get("expect");
+        if (!expect) {
+          item.set("expect", [expectation]);
+        } else if (typeof (expect as any).add === "function") {
+          (expect as any).add(expectation);
+        }
+        return doc.toString();
+      }
+    }
+  }
+  return yamlText;
+}

@@ -386,6 +386,7 @@ export function EvalsRunView({
                         iteration={iter}
                         suiteId={selectedSuiteId}
                         caseId={caseDef.id}
+                        caseDef={caseDef}
                         onGoldenSaved={() => {
                           if (selectedSuiteId) loadSuiteDetails(selectedSuiteId);
                         }}

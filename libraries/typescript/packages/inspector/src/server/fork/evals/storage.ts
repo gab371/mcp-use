@@ -66,9 +66,9 @@ export class EvalsStorage {
     await fs.mkdir(this.suitesDir, { recursive: true });
     await fs.mkdir(this.runsDir, { recursive: true });
 
-    // Seed default suite if suites directory is empty
-    const files = await fs.readdir(this.suitesDir);
-    if (files.filter((f) => f.endsWith(".yaml") || f.endsWith(".yml")).length === 0) {
+    // Seed default suite if suites directory is completely empty
+    const existing = await this.findYamlFiles(this.suitesDir);
+    if (existing.length === 0) {
       await fs.writeFile(
         path.join(this.suitesDir, "tool-routing.yaml"),
         DEFAULT_EXAMPLE_SUITE,

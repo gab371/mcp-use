@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSuiteYaml } from "../../evals/engine/suite";
+import { parseSuiteYaml, addExpectationToSuiteYaml } from "../../evals/engine/suite";
 
 describe("parseSuiteYaml", () => {
   it("successfully parses a valid suite YAML", () => {
@@ -137,6 +137,54 @@ cases:
     const result = parseSuiteYaml(yaml);
     expect(result.success).toBe(false);
     expect(result.error).toContain("Case must have either prompts or promptFile defined");
+  });
+});
+
+describe("addExpectationToSuiteYaml", () => {
+  it("injects a goldenResult expectation to an existing case", () => {
+    const yaml = `name: Test Suite
+cases:
+  - id: sample-case
+    prompts:
+      - Hello
+    expect:
+      - toolCalled: get_movie_details
+`;
+    const updated = addExpectationToSuiteYaml(yaml, "sample-case", {
+      goldenResult: {
+        tool: "get_movie_details",
+        file: "golden/movie-details.result.json",
+        match: "partial",
+      },
+    });
+    const parsed = parseSuiteYaml(updated);
+    expect(parsed.success).toBe(true);
+    expect(parsed.suite?.cases[0].expect.length).toBe(2);
+    expect(parsed.suite?.cases[0].expect[1].goldenResult?.file).toBe(
+      "golden/movie-details.result.json"
+    );
+  });
+
+  it("injects a goldenAnswer expectation to an existing case", () => {
+    const yaml = `name: Test Suite
+cases:
+  - id: sample-case
+    prompts:
+      - Hello
+    expect:
+      - toolCalled: get_movie_details
+`;
+    const updated = addExpectationToSuiteYaml(yaml, "sample-case", {
+      goldenAnswer: {
+        file: "golden/answer.md",
+        match: "similarity",
+        threshold: 0.75,
+      },
+    });
+    const parsed = parseSuiteYaml(updated);
+    expect(parsed.success).toBe(true);
+    expect(parsed.suite?.cases[0].expect.length).toBe(2);
+    expect(parsed.suite?.cases[0].expect[1].goldenAnswer?.file).toBe("golden/answer.md");
   });
 });
 

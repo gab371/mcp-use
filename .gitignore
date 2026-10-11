@@ -190,4 +190,4 @@ TODO.md
 # Local pnpm store
 .pnpm-store/
 .mcp-use/
-.evals/
+.evals/runs/

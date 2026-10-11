@@ -14,7 +14,7 @@ export function createEvalRoutes(storage: EvalsStorage = new EvalsStorage()): Ho
 
   // Get suite by id (or golden file: /suites/:id/golden/:file)
   router.get("/suites/:id{.+}", async (c) => {
-    const rawId = c.req.param("id");
+    const rawId = decodeURIComponent(c.req.param("id"));
 
     if (rawId.includes("/golden/")) {
       const idx = rawId.indexOf("/golden/");
@@ -36,7 +36,7 @@ export function createEvalRoutes(storage: EvalsStorage = new EvalsStorage()): Ho
 
   // Save suite draft by id or golden file
   router.put("/suites/:id{.+}", async (c) => {
-    const rawId = c.req.param("id");
+    const rawId = decodeURIComponent(c.req.param("id"));
 
     if (rawId.includes("/golden/")) {
       const idx = rawId.indexOf("/golden/");
@@ -64,7 +64,7 @@ export function createEvalRoutes(storage: EvalsStorage = new EvalsStorage()): Ho
 
   // Delete golden file
   router.delete("/suites/:id{.+}", async (c) => {
-    const rawId = c.req.param("id");
+    const rawId = decodeURIComponent(c.req.param("id"));
     if (rawId.includes("/golden/")) {
       const idx = rawId.indexOf("/golden/");
       const suiteId = rawId.slice(0, idx);

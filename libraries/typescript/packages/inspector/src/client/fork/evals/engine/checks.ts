@@ -217,6 +217,9 @@ export function evaluateToolResultMatch(
   const candidates: unknown[] = [actual];
 
   if (actual && typeof actual === "object") {
+    if ((actual as any).structuredContent !== undefined) {
+      candidates.push((actual as any).structuredContent);
+    }
     const content = (actual as { content?: unknown }).content;
     if (Array.isArray(content)) {
       for (const item of content) {
