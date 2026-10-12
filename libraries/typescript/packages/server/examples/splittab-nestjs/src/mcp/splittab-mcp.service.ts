@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import {
   McpContext,
@@ -13,8 +13,11 @@ import { SettleDebtsUseCase } from '../application/use-cases/settle-debts.use-ca
 @Injectable()
 export class SplitTabMcpService {
   constructor(
+    @Inject(AddExpenseUseCase)
     private readonly addExpenseUseCase: AddExpenseUseCase,
+    @Inject(GetGroupSummaryUseCase)
     private readonly getGroupSummaryUseCase: GetGroupSummaryUseCase,
+    @Inject(SettleDebtsUseCase)
     private readonly settleDebtsUseCase: SettleDebtsUseCase
   ) {}
 

@@ -8,18 +8,21 @@ cases:
   - id: add-expense
     prompts:
       - Alice just paid 45 EUR for pizzas split between Alice, Bob and Charlie. Can you record this in weekend-alps?
+      - Ajoute une dépense de 60€ payée par Bob pour les forfaits de ski partagée entre Alice, Bob et Charlie dans weekend-alps.
     expect:
       - toolCalled: add_expense
-        args: { paidByName: "Alice", amount: any-number }
+        args: { amount: any-number }
 
   - id: get-group-summary
     prompts:
       - How much did we spend in total during our weekend in the Alps? Who paid what?
+      - Quel est le récapitulatif des dépenses du groupe weekend-alps ? Qui a payé quoi ?
     expect:
       - toolCalled: get_group_summary
 
   - id: settle-debts
     prompts:
       - What are the minimum transfers needed to settle all debts in weekend-alps?
+      - Comment équilibrer les comptes du groupe weekend-alps avec le minimum de virements ?
     expect:
       - toolCalled: settle_debts
