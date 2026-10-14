@@ -14,6 +14,7 @@ import {
 import { hashToolsSnapshot } from "../engine/snapshot";
 import { TranscriptView } from "./TranscriptView";
 import { groupByScope, isSuiteInScope } from "../scope";
+import { evalsClientStorage } from "../storage/evals-client-storage";
 
 interface EvalsRunViewProps {
   connection?: McpServer;
@@ -49,9 +50,8 @@ export function EvalsRunView({
 
   const loadSuiteDetails = async (suiteId: string) => {
     try {
-      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
-      if (res.ok) {
-        const detail = await res.json();
+      const detail = await evalsClientStorage.getSuite(suiteId);
+      if (detail) {
         setGoldenFiles(detail.goldenFiles || {});
         if (detail.yaml) {
           const parsed = parseSuiteYaml(detail.yaml);
@@ -65,11 +65,10 @@ export function EvalsRunView({
     }
   };
 
-  // Load available suites from server
+  // Load available suites from hybrid storage (server or browser fallback)
   useEffect(() => {
-    fetch("/inspector/api/fork/evals/suites")
-      .then((res) => res.json())
-      .then((data) => setSuites(data.suites || []))
+    evalsClientStorage.listSuites()
+      .then((items) => setSuites(items))
       .catch((e) => console.warn("Failed to load suites:", e));
   }, []);
 
@@ -179,12 +178,10 @@ export function EvalsRunView({
 
         setCompletedRun(runResult);
 
-        // Save run to server
-        fetch("/inspector/api/fork/evals/runs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(runResult),
-        }).catch((e) => console.warn("Failed to persist run on server:", e));
+        // Save run to storage (server or browser fallback)
+        evalsClientStorage.saveRun(runResult).catch((e) =>
+          console.warn("Failed to persist run:", e)
+        );
       }
     } catch (e: unknown) {
       setRunError(e instanceof Error ? e.message : String(e));

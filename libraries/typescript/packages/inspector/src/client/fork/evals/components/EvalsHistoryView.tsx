@@ -3,6 +3,7 @@ import type { RunResult, RunSummary } from "../engine/verdict";
 import { diffToolSnapshots, type ToolDiff } from "../engine/snapshot";
 import { TranscriptView } from "./TranscriptView";
 import { isSuiteInScope } from "../scope";
+import { evalsClientStorage } from "../storage/evals-client-storage";
 
 export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
   const [allRuns, setRuns] = useState<RunSummary[]>([]);
@@ -16,11 +17,8 @@ export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
   const fetchRuns = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/inspector/api/fork/evals/runs");
-      if (res.ok) {
-        const data = await res.json();
-        setRuns(data.runs || []);
-      }
+      const runSummaries = await evalsClientStorage.listRuns();
+      setRuns(runSummaries);
     } catch (e) {
       console.warn("Failed to fetch runs:", e);
     } finally {
@@ -34,11 +32,10 @@ export function EvalsHistoryView({ folders = [] }: { folders?: string[] }) {
 
   const loadRunDetail = async (id: string, target: "active" | "compare") => {
     try {
-      const res = await fetch(`/inspector/api/fork/evals/runs/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (target === "active") setActiveRunDetail(data.run);
-        else setCompareRunDetail(data.run);
+      const run = await evalsClientStorage.getRun(id);
+      if (run) {
+        if (target === "active") setActiveRunDetail(run);
+        else setCompareRunDetail(run);
       }
     } catch (e) {
       console.warn(`Failed to fetch run ${id}:`, e);

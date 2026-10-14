@@ -3,14 +3,17 @@ export interface ForkSecretEntry {
   clientId: string;
   clientSecret: string;
   updatedAt: number;
+  expiresAt?: number;
+  persistent?: boolean; // true = 24h localStorage, false = sessionStorage only
 }
 
+export const FORK_OAUTH_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORAGE_KEY = "mcp-inspector-fork-oauth-secrets";
 
-function readStorage(): Record<string, ForkSecretEntry> {
-  if (typeof window === "undefined" || !window.localStorage) return {};
+function readSessionStorage(): Record<string, ForkSecretEntry> {
+  if (typeof window === "undefined" || !window.sessionStorage) return {};
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -22,12 +25,52 @@ function readStorage(): Record<string, ForkSecretEntry> {
   return {};
 }
 
-function writeStorage(data: Record<string, ForkSecretEntry>): void {
+function writeSessionStorage(data: Record<string, ForkSecretEntry>): void {
+  if (typeof window === "undefined" || !window.sessionStorage) return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage write errors
+  }
+}
+
+function readLocalStorage(): Record<string, ForkSecretEntry> {
+  if (typeof window === "undefined" || !window.localStorage) return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const records = parsed as Record<string, ForkSecretEntry>;
+      const now = Date.now();
+      let hasExpired = false;
+
+      // Auto-prune entries older than 24h or past expiresAt
+      for (const [key, entry] of Object.entries(records)) {
+        const expiresAt = entry.expiresAt || (entry.updatedAt ? entry.updatedAt + FORK_OAUTH_TTL_MS : 0);
+        if (expiresAt && now > expiresAt) {
+          delete records[key];
+          hasExpired = true;
+        }
+      }
+
+      if (hasExpired) {
+        writeLocalStorage(records);
+      }
+      return records;
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+  return {};
+}
+
+function writeLocalStorage(data: Record<string, ForkSecretEntry>): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
-    // Ignore storage write errors (e.g. private browsing quota)
+    // Ignore storage write errors (e.g. quota)
   }
 }
 
@@ -48,27 +91,66 @@ function normalizeUrlKey(url: string): string {
 }
 
 /**
+ * Reads all active secrets, prioritizing active sessionStorage over persistent localStorage.
+ */
+function readStorage(): Record<string, ForkSecretEntry> {
+  const localStore = readLocalStorage();
+  const sessionStore = readSessionStorage();
+  return { ...localStore, ...sessionStore };
+}
+
+/**
  * Saves a confidential client secret for a given server URL and clientId.
+ * By default, saves to sessionStorage (secure by default, disappears on tab close).
+ * If remember24h is true, saves to localStorage with a 24h TTL.
  */
 export function saveForkOAuthSecret(
   serverUrl: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
+  remember24h: boolean = false
 ): void {
   if (!serverUrl || !clientId || !clientSecret) return;
-  const store = readStorage();
   const normalizedKey = normalizeUrlKey(serverUrl);
-  store[normalizedKey] = {
+  const now = Date.now();
+
+  const entry: ForkSecretEntry = {
     serverUrl,
     clientId: clientId.trim(),
     clientSecret: clientSecret.trim(),
-    updatedAt: Date.now(),
+    updatedAt: now,
+    persistent: remember24h,
+    expiresAt: remember24h ? now + FORK_OAUTH_TTL_MS : undefined,
   };
-  writeStorage(store);
+
+  if (remember24h) {
+    const localStore = readLocalStorage();
+    localStore[normalizedKey] = entry;
+    writeLocalStorage(localStore);
+
+    // Clean any session entry so persistent one governs
+    const sessionStore = readSessionStorage();
+    if (sessionStore[normalizedKey]) {
+      delete sessionStore[normalizedKey];
+      writeSessionStorage(sessionStore);
+    }
+  } else {
+    const sessionStore = readSessionStorage();
+    sessionStore[normalizedKey] = entry;
+    writeSessionStorage(sessionStore);
+
+    // Clean any local entry so session-only governs
+    const localStore = readLocalStorage();
+    if (localStore[normalizedKey]) {
+      delete localStore[normalizedKey];
+      writeLocalStorage(localStore);
+    }
+  }
 }
 
 /**
  * Retrieves a confidential client secret by server URL or matching clientId.
+ * Auto-filters expired entries.
  */
 export function getForkOAuthSecret(
   serverUrl: string,
@@ -115,18 +197,27 @@ export function getForkOAuthSecret(
 }
 
 /**
- * Returns all saved confidential client secrets.
+ * Returns all active confidential client secrets.
  */
 export function getAllForkOAuthSecrets(): Record<string, ForkSecretEntry> {
   return readStorage();
 }
 
 /**
- * Removes a stored confidential client secret for a given server URL.
+ * Removes a stored confidential client secret for a given server URL from both stores.
  */
 export function removeForkOAuthSecret(serverUrl: string): void {
-  const store = readStorage();
   const normalizedKey = normalizeUrlKey(serverUrl);
-  delete store[normalizedKey];
-  writeStorage(store);
+
+  const sessionStore = readSessionStorage();
+  if (sessionStore[normalizedKey]) {
+    delete sessionStore[normalizedKey];
+    writeSessionStorage(sessionStore);
+  }
+
+  const localStore = readLocalStorage();
+  if (localStore[normalizedKey]) {
+    delete localStore[normalizedKey];
+    writeLocalStorage(localStore);
+  }
 }
