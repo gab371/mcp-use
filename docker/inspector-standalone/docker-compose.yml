@@ -1,0 +1,14 @@
+services:
+  inspector-standalone:
+    image: httpd:2.4-alpine
+    container_name: mcp-inspector-standalone
+    ports:
+      - "8085:80"
+    volumes:
+      - ./httpd-standalone.conf:/usr/local/apache2/conf/extra/httpd-standalone.conf:ro
+      - ./index.html:/usr/local/apache2/htdocs/index.html:ro
+      - ../../libraries/typescript/packages/inspector/dist/web:/usr/local/apache2/htdocs/inspector:ro
+    command: >
+      sh -c "sed -i 's|#LoadModule rewrite_module modules/mod_rewrite.so|LoadModule rewrite_module modules/mod_rewrite.so|' /usr/local/apache2/conf/httpd.conf &&
+             echo 'Include /usr/local/apache2/conf/extra/httpd-standalone.conf' >> /usr/local/apache2/conf/httpd.conf &&
+             httpd-foreground"
