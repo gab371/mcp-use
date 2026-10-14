@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for standalone web client of mcp-use inspector
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /repo
 
