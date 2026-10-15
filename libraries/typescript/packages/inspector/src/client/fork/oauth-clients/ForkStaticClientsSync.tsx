@@ -39,6 +39,22 @@ export function ForkStaticClientsSync(): null {
     } catch {
       // ignore
     }
+
+    // Detect if running in standalone mode (no Node backend / BFF)
+    void fetch(inspectorApi("fork/oauth/clients"), { method: "GET" })
+      .then((res) => {
+        const ct = res.headers.get("content-type") || "";
+        if (!res.ok || ct.includes("text/html")) {
+          if (typeof window !== "undefined") {
+            (window as unknown as { __MCP_PROXY_URL__?: string | null }).__MCP_PROXY_URL__ = null;
+          }
+        }
+      })
+      .catch(() => {
+        if (typeof window !== "undefined") {
+          (window as unknown as { __MCP_PROXY_URL__?: string | null }).__MCP_PROXY_URL__ = null;
+        }
+      });
   }, []);
 
   // Function to register a client with the BFF (fails gracefully in standalone mode)
