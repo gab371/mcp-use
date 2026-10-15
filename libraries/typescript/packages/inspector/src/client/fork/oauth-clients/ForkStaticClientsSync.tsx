@@ -101,8 +101,13 @@ export function ForkStaticClientsSync(): null {
     }
 
     const forkSecrets = getAllForkOAuthSecrets();
+    const activeServerUrls = new Set(servers.map((s) => s.url).filter(Boolean));
+
     for (const entry of Object.values(forkSecrets)) {
-      syncToBff(entry.serverUrl, entry.clientId, entry.clientSecret);
+      const isKnown = activeServerUrls.has(entry.serverUrl) || Boolean(storedConnections[entry.serverUrl]);
+      if (!isKnown) {
+        removeForkOAuthSecret(entry.serverUrl);
+      }
     }
 
     for (const server of servers) {
@@ -115,6 +120,19 @@ export function ForkStaticClientsSync(): null {
       const storedOAuth = stored?.oauth as
         | { clientId?: string; clientSecret?: string }
         | undefined;
+
+      const hasOAuth = Boolean(
+        memOAuth?.clientSecret ||
+        storedOAuth?.clientSecret ||
+        (memOAuth?.clientId && forkSecrets[server.url]?.clientSecret)
+      );
+
+      if (!hasOAuth) {
+        if (forkSecrets[server.url]) {
+          removeForkOAuthSecret(server.url);
+        }
+        continue;
+      }
 
       const clientId =
         memOAuth?.clientId ||
@@ -145,7 +163,6 @@ export function ForkStaticClientsSync(): null {
       }
     }
 
-    const activeServerUrls = new Set(servers.map((s) => s.url).filter(Boolean));
     for (const [key, entry] of syncedRef.current.entries()) {
       const isServerStillActive = activeServerUrls.has(entry.serverUrl);
       const stillHasSecret = Boolean(
@@ -169,7 +186,7 @@ export function ForkStaticClientsSync(): null {
     }
   }, [servers]);
 
-  // 2. Global DOM listeners to capture typed secrets, pre-fill form and mount "Remember 24h" checkbox
+  // 2. Global DOM listeners to capture typed secrets and mount "Remember 24h" checkbox
   useEffect(() => {
     if (typeof window === "undefined" || !window.document) return;
 
@@ -186,9 +203,13 @@ export function ForkStaticClientsSync(): null {
         'input[placeholder*="client ID" i], input[placeholder*="Client ID" i]'
       ) as HTMLInputElement | null;
 
-      const urlEl = container.querySelector(
-        'input[placeholder*="example.com/mcp" i], input[placeholder*="URL" i]'
-      ) as HTMLInputElement | null;
+      const urlEl =
+        (container.querySelector(
+          'input[data-testid="connection-form-url-input"], input[placeholder*="localhost" i], input[placeholder*="example.com/mcp" i], input[placeholder*="URL" i]'
+        ) as HTMLInputElement | null) ||
+        (document.querySelector(
+          'input[data-testid="connection-form-url-input"], input[placeholder*="localhost" i]'
+        ) as HTMLInputElement | null);
 
       const rememberCheckbox = container.querySelector(
         'input[data-testid="fork-remember-secret"]'
@@ -196,8 +217,12 @@ export function ForkStaticClientsSync(): null {
 
       const params = new URLSearchParams(window.location.search);
       const urlFromQuery = params.get("server") || params.get("autoConnect") || "";
-      const serverUrl = (urlEl?.value || urlFromQuery || servers[0]?.url || "").trim();
-      const clientId = (clientIdEl?.value || servers.find(s => s.url === serverUrl)?.oauth?.clientId || "").trim();
+      const serverUrl = (urlEl?.value || urlFromQuery || "").trim();
+      const clientId = (
+        clientIdEl?.value ||
+        (serverUrl ? servers.find((s) => s.url === serverUrl)?.oauth?.clientId : "") ||
+        ""
+      ).trim();
       const remember24h = rememberCheckbox?.checked ?? false;
 
       return { serverUrl, clientId, remember24h };
@@ -211,12 +236,14 @@ export function ForkStaticClientsSync(): null {
       if (!placeholder.includes("Client secret")) return;
 
       const clientSecret = target.value.trim();
-      if (!clientSecret) return;
-
       const { serverUrl, clientId, remember24h } = findCurrentContext(target);
-      if (serverUrl && clientId) {
-        saveForkOAuthSecret(serverUrl, clientId, clientSecret, remember24h);
-        syncToBff(serverUrl, clientId, clientSecret);
+      if (serverUrl) {
+        if (clientSecret && clientId) {
+          saveForkOAuthSecret(serverUrl, clientId, clientSecret, remember24h);
+          syncToBff(serverUrl, clientId, clientSecret);
+        } else if (!clientSecret) {
+          removeForkOAuthSecret(serverUrl);
+        }
       }
     };
 
@@ -238,34 +265,30 @@ export function ForkStaticClientsSync(): null {
         );
         for (const input of Array.from(secretInputs) as HTMLInputElement[]) {
           const secret = input.value.trim();
-          if (secret) {
-            const { serverUrl, clientId, remember24h } = findCurrentContext(input);
-            if (serverUrl && clientId) {
+          const { serverUrl, clientId, remember24h } = findCurrentContext(input);
+          if (serverUrl) {
+            if (secret && clientId) {
               saveForkOAuthSecret(serverUrl, clientId, secret, remember24h);
               syncToBff(serverUrl, clientId, secret);
+            } else if (!secret) {
+              removeForkOAuthSecret(serverUrl);
             }
           }
         }
       }
     };
 
-    // Mount remember checkbox and pre-fill secret input if empty
+    // Mount remember checkbox without interfering with controlled React input values
     const checkAndMountRememberCheckbox = () => {
       const secretInputs = document.querySelectorAll(
         'input[placeholder*="Client secret" i]'
       );
       if (secretInputs.length === 0) return;
 
-      const params = new URLSearchParams(window.location.search);
-      const urlFromQuery = params.get("server") || params.get("autoConnect") || "";
-      const targetUrl = urlFromQuery || servers[0]?.url || "";
-      const stored = targetUrl ? getForkOAuthSecret(targetUrl) : undefined;
-
       for (const input of Array.from(secretInputs) as HTMLInputElement[]) {
         const container = input.parentElement;
         if (!container) continue;
 
-        // Check if our remember checkbox is already injected
         let wrapper = container.querySelector('[data-fork-remember-wrapper="true"]') as HTMLElement | null;
         if (!wrapper) {
           wrapper = document.createElement("label");
@@ -276,6 +299,9 @@ export function ForkStaticClientsSync(): null {
           checkbox.type = "checkbox";
           checkbox.setAttribute("data-testid", "fork-remember-secret");
           checkbox.className = "rounded border-border text-primary focus:ring-primary h-3.5 w-3.5";
+
+          const { serverUrl } = findCurrentContext(input);
+          const stored = serverUrl ? getForkOAuthSecret(serverUrl) : undefined;
           checkbox.checked = stored?.persistent ?? false;
 
           const span = document.createElement("span");
@@ -284,22 +310,11 @@ export function ForkStaticClientsSync(): null {
           wrapper.appendChild(checkbox);
           wrapper.appendChild(span);
 
-          // Insert after input element
           if (input.nextSibling) {
             container.insertBefore(wrapper, input.nextSibling);
           } else {
             container.appendChild(wrapper);
           }
-        }
-
-        // Pre-fill input value if needed
-        if (stored?.clientSecret && !input.value) {
-          const setter = Object.getOwnPropertyDescriptor(
-            window.HTMLInputElement.prototype,
-            "value"
-          )?.set;
-          setter?.call(input, stored.clientSecret);
-          input.dispatchEvent(new Event("input", { bubbles: true }));
         }
       }
     };

@@ -166,22 +166,24 @@ export function getForkOAuthSecret(
     }
   }
 
-  // 2. Same origin match
-  try {
-    const targetOrigin = new URL(serverUrl).origin;
-    for (const entry of Object.values(store)) {
-      try {
-        if (new URL(entry.serverUrl).origin === targetOrigin) {
-          if (!clientId || entry.clientId === clientId) {
-            return entry;
+  // 2. Same origin match (only when clientId matches to avoid bleeding between different MCP endpoints)
+  if (clientId) {
+    try {
+      const targetOrigin = new URL(serverUrl).origin;
+      for (const entry of Object.values(store)) {
+        try {
+          if (new URL(entry.serverUrl).origin === targetOrigin) {
+            if (entry.clientId === clientId) {
+              return entry;
+            }
           }
+        } catch {
+          // Ignore URL parse error
         }
-      } catch {
-        // Ignore URL parse error
       }
+    } catch {
+      // Ignore URL parse error
     }
-  } catch {
-    // Ignore URL parse error
   }
 
   // 3. ClientId fallback if provided
