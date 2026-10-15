@@ -26,9 +26,19 @@ export function ForkStaticClientsSync(): null {
   const { servers } = useMcpClient();
   const syncedRef = useRef<Map<string, SyncedClientEntry>>(new Map());
 
-  // Install standalone client-side interceptor for direct browser requests
+  // Install standalone client-side interceptor for direct browser requests and ensure telemetry is disabled
   useEffect(() => {
     installStandaloneOAuthInterceptor();
+    try {
+      if (typeof window !== "undefined") {
+        (window as unknown as { __MCP_USE_ANONYMIZED_TELEMETRY__?: boolean }).__MCP_USE_ANONYMIZED_TELEMETRY__ = false;
+        if (typeof localStorage !== "undefined" && typeof localStorage.setItem === "function") {
+          localStorage.setItem("MCP_USE_ANONYMIZED_TELEMETRY", "false");
+        }
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   // Function to register a client with the BFF (fails gracefully in standalone mode)

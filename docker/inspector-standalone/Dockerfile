@@ -11,6 +11,7 @@ COPY libraries/typescript ./libraries/typescript
 WORKDIR /repo/libraries/typescript
 
 ENV NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false
+ENV MCP_USE_ANONYMIZED_TELEMETRY=false
 RUN pnpm install --frozen-lockfile || pnpm install
 
 # Build client, agent, and inspector standalone web bundle with relative base

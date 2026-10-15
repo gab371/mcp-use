@@ -59,6 +59,8 @@ jobs:
 
       - name: Build standalone Inspector web bundle
         working-directory: libraries/typescript
+        env:
+          MCP_USE_ANONYMIZED_TELEMETRY: "false"
         run: pnpm --filter @mcp-use/inspector exec vite build --config vite.config.ts --base ./
 
       - name: Prepare GitHub Pages artifacts
