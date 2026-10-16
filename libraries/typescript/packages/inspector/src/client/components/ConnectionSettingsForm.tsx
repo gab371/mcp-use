@@ -663,27 +663,25 @@ export function ConnectionSettingsForm({
         </div>
       )}
 
-      {/* Configuration Buttons Row */}
+      {/* Configuration Buttons Row - 2x2 grid across 2 rows */}
       {!inlineSections && (
-        <div className="flex flex-row gap-3 @lg:flex-col">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           {/* Authentication Button */}
           <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
             <DialogTrigger
               render={
-                <div className="relative flex-1 ">
-                  <Button
-                    data-testid="connection-form-auth-button"
-                    variant="outline"
-                    className={cn(
-                      (clientId || clientSecret || scope) && "border-2",
-                      "w-full justify-center hover:text-white cursor-pointer",
-                      buttonClassName
-                    )}
-                  >
-                    <Shield className="w-4 h-4 mr-0" />
-                    Authentication
-                  </Button>
-                </div>
+                <Button
+                  data-testid="connection-form-auth-button"
+                  variant="outline"
+                  className={cn(
+                    (clientId || clientSecret || scope) && "border-2",
+                    "w-full justify-center hover:text-white cursor-pointer",
+                    buttonClassName
+                  )}
+                >
+                  <Shield className="w-4 h-4 mr-0" />
+                  Authentication
+                </Button>
               }
               nativeButton={false}
             />
@@ -707,19 +705,17 @@ export function ConnectionSettingsForm({
           <Dialog open={headersDialogOpen} onOpenChange={setHeadersDialogOpen}>
             <DialogTrigger
               render={
-                <div className="relative flex-1 ">
-                  <Button
-                    data-testid="connection-form-headers-button"
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-center hover:text-white cursor-pointer",
-                      buttonClassName
-                    )}
-                  >
-                    <FileText className="w-4 h-4" />
-                    Custom Headers
-                  </Button>
-                </div>
+                <Button
+                  data-testid="connection-form-headers-button"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-center hover:text-white cursor-pointer",
+                    buttonClassName
+                  )}
+                >
+                  <FileText className="w-4 h-4" />
+                  Custom Headers
+                </Button>
               }
               nativeButton={false}
             />
@@ -746,7 +742,7 @@ export function ConnectionSettingsForm({
                   data-testid="connection-form-config-button"
                   variant="outline"
                   className={cn(
-                    "flex-1  justify-center hover:text-white cursor-pointer",
+                    "w-full justify-center hover:text-white cursor-pointer",
                     buttonClassName
                   )}
                 >
@@ -774,19 +770,17 @@ export function ConnectionSettingsForm({
           {/* fork: feat 11 local cors proxy button */}
           <LocalProxyHelpModal
             trigger={
-              <div className="relative flex-1">
-                <Button
-                  data-testid="connection-form-local-proxy-button"
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-center hover:text-white cursor-pointer",
-                    buttonClassName
-                  )}
-                >
-                  <Terminal className="w-4 h-4" />
-                  Proxy Local
-                </Button>
-              </div>
+              <Button
+                data-testid="connection-form-local-proxy-button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-center hover:text-white cursor-pointer",
+                  buttonClassName
+                )}
+              >
+                <Terminal className="w-4 h-4" />
+                Proxy Local
+              </Button>
             }
             onApplyProxyAddress={setProxyAddress}
             currentProxyAddress={proxyAddress}
