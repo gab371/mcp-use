@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { parseSuiteYaml, type EvalSuite } from "../engine/suite";
 import { groupByScope, isSuiteInScope } from "../scope";
+import { evalsClientStorage } from "../storage/evals-client-storage";
 
 interface SuiteMeta {
   id: string;
@@ -48,17 +49,17 @@ export function SuiteEditorView({
 
   // New suite creator (feat 05)
   const [newSuite, setNewSuite] = useState<{ folder: string; name: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const parsed = parseSuiteYaml(yamlContent);
 
   const fetchSuiteDetails = async (id: string) => {
     try {
-      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(id)}`);
-      if (res.ok) {
-        const detail = await res.json();
+      const detail = await evalsClientStorage.getSuite(id);
+      if (detail) {
         const files: Record<string, string> = {};
         if (detail.goldenFiles) {
-          for (const [k, v] of Object.entries(detail.goldenFiles as Record<string, string>)) {
+          for (const [k, v] of Object.entries(detail.goldenFiles)) {
             if (k.startsWith("golden/")) {
               files[k] = v;
             }
@@ -81,13 +82,38 @@ export function SuiteEditorView({
 
   const fetchSuites = async () => {
     try {
-      const res = await fetch("/inspector/api/fork/evals/suites");
-      if (res.ok) {
-        const data = await res.json();
-        setSuites(data.suites || []);
-      }
+      const suitesList = await evalsClientStorage.listSuites();
+      setSuites(suitesList.map(s => ({
+        id: s.id,
+        name: s.name,
+        yaml: "",
+        caseCount: s.caseCount || 0
+      })));
     } catch (e) {
       console.warn("Failed to fetch suites:", e);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target?.result as string;
+        if (!text) return;
+        const suiteId = await evalsClientStorage.importSuite(file.name, text);
+        await fetchSuites();
+        setSelectedSuiteId(suiteId);
+        setYamlContent(text);
+        await fetchSuiteDetails(suiteId);
+      };
+      reader.readAsText(file);
+    } catch (err) {
+      console.warn("Failed to import YAML suite file:", err);
+    } finally {
+      e.target.value = "";
     }
   };
 
@@ -123,23 +149,15 @@ export function SuiteEditorView({
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ yaml: yamlContent }),
-      });
-      if (res.ok) {
-        setSaveStatus("Saved successfully!");
-        setTimeout(() => setSaveStatus(null), 3000);
-        fetchSuites();
-        if (parsed.success && parsed.suite && onSelectSuite) {
-          onSelectSuite(parsed.suite, yamlContent);
-        }
-      } else {
-        setSaveStatus("Failed to save suite.");
+      await evalsClientStorage.saveSuite(selectedSuiteId, yamlContent);
+      setSaveStatus("Saved successfully!");
+      setTimeout(() => setSaveStatus(null), 3000);
+      await fetchSuites();
+      if (parsed.success && parsed.suite && onSelectSuite) {
+        onSelectSuite(parsed.suite, yamlContent);
       }
     } catch {
-      setSaveStatus("Network error while saving.");
+      setSaveStatus("Error while saving suite.");
     } finally {
       setIsSaving(false);
     }
@@ -161,13 +179,7 @@ export function SuiteEditorView({
   };
 
   const handleDownload = () => {
-    const blob = new Blob([yamlContent], { type: "text/yaml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${selectedSuiteId.replace(/\//g, "-") || "suite"}.yaml`;
-    a.click();
-    URL.revokeObjectURL(url);
+    evalsClientStorage.downloadSuiteYaml(selectedSuiteId || "suite", yamlContent);
   };
 
   // Golden asset operations
@@ -183,23 +195,12 @@ export function SuiteEditorView({
     setGoldenSaveStatus(null);
     try {
       const fileNameOnly = selectedGoldenFile.replace(/^golden\//, "");
-      const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileNameOnly)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: goldenContent }),
-        }
-      );
-      if (res.ok) {
-        setGoldenSaveStatus("Saved successfully!");
-        setGoldenFiles((prev) => ({ ...prev, [selectedGoldenFile]: goldenContent }));
-        setTimeout(() => setGoldenSaveStatus(null), 3000);
-      } else {
-        setGoldenSaveStatus("Failed to save golden asset.");
-      }
+      await evalsClientStorage.saveGoldenFile(selectedSuiteId, fileNameOnly, goldenContent);
+      setGoldenSaveStatus("Saved successfully!");
+      setGoldenFiles((prev) => ({ ...prev, [selectedGoldenFile]: goldenContent }));
+      setTimeout(() => setGoldenSaveStatus(null), 3000);
     } catch {
-      setGoldenSaveStatus("Network error while saving.");
+      setGoldenSaveStatus("Error while saving asset.");
     } finally {
       setIsSavingGolden(false);
     }
@@ -210,15 +211,8 @@ export function SuiteEditorView({
     if (!confirm(`Delete ${fileKey}?`)) return;
     try {
       const fileNameOnly = fileKey.replace(/^golden\//, "");
-      const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileNameOnly)}`,
-        {
-          method: "DELETE",
-        }
-      );
-      if (res.ok) {
-        await fetchSuiteDetails(selectedSuiteId);
-      }
+      await evalsClientStorage.deleteGoldenFile(selectedSuiteId, fileNameOnly);
+      await fetchSuiteDetails(selectedSuiteId);
     } catch (e) {
       console.warn("Failed to delete golden file:", e);
     }
@@ -239,21 +233,12 @@ export function SuiteEditorView({
         : "# Golden Answer Reference\n\nWrite the expected agent response here...\n";
 
     try {
-      const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(selectedSuiteId)}/golden/${encodeURIComponent(fileName)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: initialContent }),
-        }
-      );
-      if (res.ok) {
-        setIsCreatingGolden(false);
-        setNewGoldenName("");
-        await fetchSuiteDetails(selectedSuiteId);
-        setSelectedGoldenFile(`golden/${fileName}`);
-        setGoldenContent(initialContent);
-      }
+      await evalsClientStorage.saveGoldenFile(selectedSuiteId, fileName, initialContent);
+      setIsCreatingGolden(false);
+      setNewGoldenName("");
+      await fetchSuiteDetails(selectedSuiteId);
+      setSelectedGoldenFile(`golden/${fileName}`);
+      setGoldenContent(initialContent);
     } catch (e) {
       console.warn("Failed to create golden file:", e);
     }
@@ -386,11 +371,27 @@ export function SuiteEditorView({
                   {saveStatus}
                 </span>
               )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".yaml,.yml"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded border border-border bg-muted/60 px-3 py-1 text-xs hover:bg-muted font-medium transition-colors"
+                title="Import a YAML suite from your computer"
+              >
+                📥 Import YAML
+              </button>
               <button
                 onClick={handleDownload}
                 className="rounded border border-border bg-muted/60 px-3 py-1 text-xs hover:bg-muted font-medium transition-colors"
+                title="Export this suite to a YAML file"
               >
-                Download YAML
+                📤 Export YAML
               </button>
               <button
                 onClick={handleSave}

@@ -71,6 +71,8 @@ export function checkChangesets(options) {
   const { baseBranch, headBranch, head } = options;
   // Promotion consumes changesets already applied by canary releases.
   if (baseBranch === "main" && headBranch === "canary") return [];
+  // Fork branches are private development branches and do not require changesets.
+  if (baseBranch?.startsWith("fork/") || headBranch?.startsWith("fork/")) return [];
   const { git, ancestor, read, readIfPresent } = comparison(options);
   const changed = git(
     "diff",

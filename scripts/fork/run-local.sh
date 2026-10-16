@@ -10,6 +10,9 @@ export NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false
 export PNPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS=false
 export COREPACK_ENABLE_PACKAGE_MANAGER=0
 
+# Disable anonymized telemetry
+export MCP_USE_ANONYMIZED_TELEMETRY=false
+
 # Trust local root CA certificate (mkcert) in .certificates/
 CERT_FILE=""
 for candidate in \

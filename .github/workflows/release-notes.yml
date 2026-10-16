@@ -11,6 +11,7 @@ jobs:
   release-changeset-check:
     name: release-changeset-check
     runs-on: ubuntu-latest
+    if: "!startsWith(github.base_ref, 'fork/') && !startsWith(github.head_ref, 'fork/')"
     steps:
       - uses: actions/checkout@v7
         with:

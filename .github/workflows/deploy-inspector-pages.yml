@@ -1,0 +1,65 @@
+name: Build Inspector Standalone
+
+on:
+  push:
+    branches:
+      - fork/inspector-standalone
+      - fork/main
+      - main
+    paths:
+      - "libraries/typescript/packages/inspector/**"
+      - "libraries/typescript/packages/client/**"
+      - "libraries/typescript/packages/agent/**"
+      - ".github/workflows/deploy-inspector-pages.yml"
+  pull_request:
+    paths:
+      - "libraries/typescript/packages/inspector/**"
+      - "libraries/typescript/packages/client/**"
+      - "libraries/typescript/packages/agent/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+          cache-dependency-path: libraries/typescript/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: libraries/typescript
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build internal packages (@mcp-use/client, @mcp-use/agent)
+        working-directory: libraries/typescript
+        run: |
+          pnpm --filter @mcp-use/client build
+          pnpm --filter @mcp-use/agent build
+
+      - name: Build standalone Inspector web bundle
+        working-directory: libraries/typescript
+        env:
+          MCP_USE_ANONYMIZED_TELEMETRY: "false"
+        run: pnpm --filter @mcp-use/inspector exec vite build --config vite.config.ts --base ./
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: inspector-standalone-dist
+          path: libraries/typescript/packages/inspector/dist/web
+          retention-days: 7
+

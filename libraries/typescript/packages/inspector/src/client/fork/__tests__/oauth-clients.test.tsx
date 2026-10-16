@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-const mockLocalStorage = (() => {
+const createMockStorage = () => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
@@ -22,7 +22,10 @@ const mockLocalStorage = (() => {
       store = {};
     },
   };
-})();
+};
+
+const mockLocalStorage = createMockStorage();
+const mockSessionStorage = createMockStorage();
 
 Object.defineProperty(window, "localStorage", {
   value: mockLocalStorage,
@@ -31,6 +34,16 @@ Object.defineProperty(window, "localStorage", {
 });
 Object.defineProperty(globalThis, "localStorage", {
   value: mockLocalStorage,
+  writable: true,
+  configurable: true,
+});
+Object.defineProperty(window, "sessionStorage", {
+  value: mockSessionStorage,
+  writable: true,
+  configurable: true,
+});
+Object.defineProperty(globalThis, "sessionStorage", {
+  value: mockSessionStorage,
   writable: true,
   configurable: true,
 });
@@ -60,6 +73,7 @@ describe("ForkStaticClientsSync", () => {
     document.body.appendChild(container);
     root = createRoot(container);
     mockLocalStorage.clear();
+    mockSessionStorage.clear();
     vi.clearAllMocks();
 
     fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
@@ -76,6 +90,7 @@ describe("ForkStaticClientsSync", () => {
       container.parentNode.removeChild(container);
     }
     mockLocalStorage.clear();
+    mockSessionStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -232,5 +247,42 @@ describe("ForkStaticClientsSync", () => {
         }),
       })
     );
+  });
+
+  it("does not bleed OAuth credentials to a second server without OAuth", async () => {
+    mockUseMcpClient.mockReturnValue({
+      servers: [
+        {
+          id: "server-oauth",
+          url: "https://auth.example.com/mcp",
+          oauth: {
+            clientId: "oauth-client",
+            clientSecret: "oauth-secret",
+          },
+        },
+        {
+          id: "server-no-oauth",
+          url: "https://public.example.com/mcp",
+          // No OAuth configured
+        },
+      ],
+      storageLoaded: true,
+    });
+
+    await act(async () => {
+      root?.render(<ForkStaticClientsSync />);
+    });
+
+    // Should only have synced credentials for server-oauth
+    const putCalls = fetchMock.mock.calls.filter(
+      (call) =>
+        typeof call[0] === "string" &&
+        call[0].includes("/inspector/api/fork/oauth/clients") &&
+        call[1]?.method === "PUT"
+    );
+
+    expect(putCalls.length).toBe(1);
+    expect(putCalls[0][1].body).toContain("https://auth.example.com/mcp");
+    expect(putCalls[0][1].body).not.toContain("https://public.example.com/mcp");
   });
 });

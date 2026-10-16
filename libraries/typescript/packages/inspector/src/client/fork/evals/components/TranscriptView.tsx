@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { IterationResult } from "../engine/verdict";
 import { addExpectationToSuiteYaml, type EvalCase } from "../engine/suite";
+import { evalsClientStorage } from "../storage/evals-client-storage";
 
 export interface TranscriptViewProps {
   iteration: IterationResult;
@@ -59,39 +60,21 @@ export function TranscriptView({
       : `${toolName}.result.json`;
 
     try {
-      const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: contentToSave }),
-        }
-      );
-      if (!res.ok) {
-        setSavingStatus((s) => ({ ...s, [key]: "Failed to save file" }));
-        return;
-      }
+      await evalsClientStorage.saveGoldenFile(suiteId, fileName, contentToSave);
 
       // 3. If no golden check was previously configured in the YAML, update the suite YAML
       if (!existingRelFile && caseId) {
         try {
-          const suiteRes = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
-          if (suiteRes.ok) {
-            const suiteDetail = await suiteRes.json();
-            if (suiteDetail.yaml) {
-              const updatedYaml = addExpectationToSuiteYaml(suiteDetail.yaml, caseId, {
-                goldenResult: {
-                  tool: toolName,
-                  file: `golden/${fileName}`,
-                  match: "partial",
-                },
-              });
-              await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ yaml: updatedYaml }),
-              });
-            }
+          const suiteDetail = await evalsClientStorage.getSuite(suiteId);
+          if (suiteDetail?.yaml) {
+            const updatedYaml = addExpectationToSuiteYaml(suiteDetail.yaml, caseId, {
+              goldenResult: {
+                tool: toolName,
+                file: `golden/${fileName}`,
+                match: "partial",
+              },
+            });
+            await evalsClientStorage.saveSuite(suiteId, updatedYaml);
           }
         } catch (e) {
           console.warn("Failed to update suite YAML:", e);
@@ -131,39 +114,21 @@ export function TranscriptView({
       : `${caseId || "answer"}.answer.md`;
 
     try {
-      const res = await fetch(
-        `/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}/golden/${encodeURIComponent(fileName)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: transcript.finalText }),
-        }
-      );
-      if (!res.ok) {
-        setSavingStatus((s) => ({ ...s, answer: "Failed to save file" }));
-        return;
-      }
+      await evalsClientStorage.saveGoldenFile(suiteId, fileName, transcript.finalText);
 
       // 2. If no golden answer was previously configured, update the suite YAML
       if (!existingAnswerFile && caseId) {
         try {
-          const suiteRes = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`);
-          if (suiteRes.ok) {
-            const suiteDetail = await suiteRes.json();
-            if (suiteDetail.yaml) {
-              const updatedYaml = addExpectationToSuiteYaml(suiteDetail.yaml, caseId, {
-                goldenAnswer: {
-                  file: `golden/${fileName}`,
-                  match: "similarity",
-                  threshold: 0.75,
-                },
-              });
-              await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(suiteId)}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ yaml: updatedYaml }),
-              });
-            }
+          const suiteDetail = await evalsClientStorage.getSuite(suiteId);
+          if (suiteDetail?.yaml) {
+            const updatedYaml = addExpectationToSuiteYaml(suiteDetail.yaml, caseId, {
+              goldenAnswer: {
+                file: `golden/${fileName}`,
+                match: "similarity",
+                threshold: 0.75,
+              },
+            });
+            await evalsClientStorage.saveSuite(suiteId, updatedYaml);
           }
         } catch (e) {
           console.warn("Failed to update suite YAML:", e);
