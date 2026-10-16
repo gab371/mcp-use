@@ -25,7 +25,8 @@ import {
 } from "@/client/components/ui/select";
 import { cn } from "@/client/lib/utils";
 import { copyToClipboard } from "@/client/utils/browser";
-import { Cog, Copy, FileText, Shield } from "lucide-react";
+import { Cog, Copy, FileText, Shield, Terminal } from "lucide-react";
+import { LocalProxyAlert, LocalProxyHelpModal } from "@/client/fork/proxy"; // fork: feat 11 local cors proxy help
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { CustomHeader } from "./CustomHeadersEditor";
@@ -457,6 +458,14 @@ export function ConnectionSettingsForm({
           onChange={(e) => setProxyAddress(e.target.value)}
         />
       </div>
+      {/* fork: feat 11 local cors proxy alert */}
+      <div className="sm:col-span-2">
+        <LocalProxyAlert
+          connectionMode={connectionMode}
+          proxyAddress={proxyAddress}
+          setProxyAddress={setProxyAddress}
+        />
+      </div>
       <div className="space-y-2">
         <Label className="text-sm">Request Timeout</Label>
         <Input
@@ -761,6 +770,27 @@ export function ConnectionSettingsForm({
               </DialogBody>
             </DialogContent>
           </Dialog>
+
+          {/* fork: feat 11 local cors proxy button */}
+          <LocalProxyHelpModal
+            trigger={
+              <div className="relative flex-1">
+                <Button
+                  data-testid="connection-form-local-proxy-button"
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-center hover:text-white cursor-pointer",
+                    buttonClassName
+                  )}
+                >
+                  <Terminal className="w-4 h-4" />
+                  Proxy Local
+                </Button>
+              </div>
+            }
+            onApplyProxyAddress={setProxyAddress}
+            currentProxyAddress={proxyAddress}
+          />
         </div>
       )}
 
