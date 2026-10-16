@@ -57,12 +57,15 @@ export function SuiteEditorView({
     try {
       const detail = await evalsClientStorage.getSuite(id);
       if (detail) {
+        if (detail.yaml) {
+          setYamlContent(detail.yaml);
+        }
         const files: Record<string, string> = {};
         if (detail.goldenFiles) {
           for (const [k, v] of Object.entries(detail.goldenFiles)) {
-            if (k.startsWith("golden/")) {
-              files[k] = v;
-            }
+            const cleanKey = k.startsWith("golden/") ? k.slice("golden/".length) : k;
+            files[cleanKey] = v;
+            files[k] = v;
           }
         }
         setGoldenFiles(files);
@@ -130,15 +133,19 @@ export function SuiteEditorView({
     if (isUnsavedDraft || visibleSuites.some((s) => s.id === selectedSuiteId)) return;
     const first = visibleSuites[0];
     setSelectedSuiteId(first?.id ?? "");
-    setYamlContent(first?.yaml ?? "");
-    if (first) fetchSuiteDetails(first.id);
+    if (first) {
+      if (first.yaml) setYamlContent(first.yaml);
+      fetchSuiteDetails(first.id);
+    } else {
+      setYamlContent("");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleIds]);
 
   const handleSelect = (id: string) => {
     setSelectedSuiteId(id);
     const suite = suites.find((s) => s.id === id);
-    if (suite) {
+    if (suite && suite.yaml) {
       setYamlContent(suite.yaml);
     }
     fetchSuiteDetails(id);

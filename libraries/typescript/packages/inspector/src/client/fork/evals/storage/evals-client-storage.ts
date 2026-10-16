@@ -138,15 +138,16 @@ export const evalsClientStorage = {
    * Retrieves suite detail by ID (YAML and golden files).
    */
   async getSuite(id: string): Promise<SuiteDetail | null> {
+    const suitePath = id.split("/").map(encodeURIComponent).join("/");
     if (backendAvailable !== false) {
       try {
-        const res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(id)}`);
+        let res = await fetch(`/inspector/api/fork/evals/suites/${suitePath}`);
+        if (!res.ok && res.status === 404) {
+          res = await fetch(`/inspector/api/fork/evals/suites/${encodeURIComponent(id)}`);
+        }
         if (res.ok) {
           backendAvailable = true;
           return await res.json();
-        }
-        if (res.status === 404) {
-          // If server returns 404, check static / local storage
         }
       } catch {
         backendAvailable = false;
