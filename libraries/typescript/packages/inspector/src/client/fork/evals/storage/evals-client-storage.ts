@@ -91,6 +91,32 @@ export const evalsClientStorage = {
       }
     }
 
+    // Static Pages fallback: fetch published evals manifest
+    try {
+      const staticRes = await fetch("./evals/suites.json");
+      if (staticRes.ok) {
+        const data = await staticRes.json();
+        const store = ensureBrowserSuites();
+        const published: SuiteListItem[] = (data.suites || []).map((s: { id: string; name?: string; caseCount?: number }) => ({
+          id: s.id,
+          name: s.name || s.id,
+          caseCount: s.caseCount,
+          isCustom: false,
+        }));
+        const publishedIds = new Set(published.map((p) => p.id));
+        const localCustom = Object.entries(store)
+          .filter(([id]) => !publishedIds.has(id))
+          .map(([id, item]) => ({
+            id,
+            name: item.name || id,
+            isCustom: true,
+          }));
+        return [...published, ...localCustom];
+      }
+    } catch {
+      // Ignore network errors on static check
+    }
+
     // Fallback: Browser storage
     const store = ensureBrowserSuites();
     return Object.entries(store).map(([id, item]) => {
@@ -120,14 +146,41 @@ export const evalsClientStorage = {
           return await res.json();
         }
         if (res.status === 404) {
-          // If server returns 404, check browser storage
+          // If server returns 404, check static / local storage
         }
       } catch {
         backendAvailable = false;
       }
     }
 
+    // 1. Check local storage if the user modified/created this suite locally
     const store = ensureBrowserSuites();
+    if (store[id]?.yaml) {
+      return {
+        id,
+        name: store[id].name,
+        yaml: store[id].yaml,
+        goldenFiles: store[id].goldenFiles || {},
+      };
+    }
+
+    // 2. Fetch published static YAML from Pages
+    try {
+      const yamlRes = await fetch(`./evals/suites/${id}.yaml`);
+      if (yamlRes.ok) {
+        const yaml = await yamlRes.text();
+        const parsed = parseSuiteYaml(yaml);
+        return {
+          id,
+          name: (parsed.success && parsed.suite?.name) ? parsed.suite.name : id,
+          yaml,
+          goldenFiles: {},
+        };
+      }
+    } catch {
+      // Ignore fetch errors
+    }
+
     const item = store[id];
     if (!item) return null;
 
@@ -198,6 +251,15 @@ export const evalsClientStorage = {
     const goldenStore = getLocalItem<Record<string, string>>(STORAGE_KEY_GOLDEN, {});
     if (goldenStore[goldenKey] !== undefined) {
       return goldenStore[goldenKey];
+    }
+
+    // Static Pages fallback: fetch published golden file
+    try {
+      const suiteDir = suiteId.includes("/") ? suiteId.substring(0, suiteId.lastIndexOf("/")) : suiteId;
+      const res = await fetch(`./evals/suites/${suiteDir}/golden/${encodeURIComponent(relPath)}`);
+      if (res.ok) return await res.text();
+    } catch {
+      // Ignore fetch error
     }
 
     const store = ensureBrowserSuites();
