@@ -8,8 +8,8 @@
  *
  * Supported Target Formats:
  * 1. Native mcp-use header:  X-Target-URL: https://target.server/mcp
- * 2. Query parameter:        http://127.0.0.1:3001/?url=https://target.server/mcp
- * 3. Path prefix:            http://127.0.0.1:3001/https://target.server/mcp
+ * 2. Query parameter:        http://127.0.0.1:3020/?url=https://target.server/mcp
+ * 3. Path prefix:            http://127.0.0.1:3020/https://target.server/mcp
  */
 
 import http from "node:http";
@@ -25,7 +25,8 @@ function getArg(flag, defaultValue) {
   return defaultValue;
 }
 
-const PORT = parseInt(process.env.PORT || getArg("--port", "3001"), 10);
+const firstArgPort = args[0] && /^\d+$/.test(args[0]) ? args[0] : null;
+const PORT = parseInt(process.env.PORT || getArg("--port", null) || firstArgPort || "3020", 10);
 const HOST = process.env.HOST || getArg("--host", "127.0.0.1");
 
 function getTargetUrl(req) {
