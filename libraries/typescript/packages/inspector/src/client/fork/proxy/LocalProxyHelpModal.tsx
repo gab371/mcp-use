@@ -57,7 +57,7 @@ export function LocalProxyHelpModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {trigger && <DialogTrigger render={trigger} nativeButton={false} />}
+      {trigger && <DialogTrigger render={trigger} nativeButton />}
       <DialogContent scrollable className="w-[calc(100vw-2rem)] sm:w-full max-w-2xl max-h-[85vh]">
         <DialogHeader className="space-y-1">
           <div className="flex items-center gap-2">
