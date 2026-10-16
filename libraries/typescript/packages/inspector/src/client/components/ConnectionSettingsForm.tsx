@@ -25,8 +25,8 @@ import {
 } from "@/client/components/ui/select";
 import { cn } from "@/client/lib/utils";
 import { copyToClipboard } from "@/client/utils/browser";
-import { Cog, Copy, FileText, Shield, Terminal } from "lucide-react";
-import { LocalProxyAlert, LocalProxyHelpModal } from "@/client/fork/proxy"; // fork: feat 11 local cors proxy help
+import { Cog, Copy, FileText, Shield } from "lucide-react";
+import { LocalProxyAlert, LocalProxyButton } from "@/client/fork/proxy"; // fork: local cors proxy
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { CustomHeader } from "./CustomHeadersEditor";
@@ -663,25 +663,27 @@ export function ConnectionSettingsForm({
         </div>
       )}
 
-      {/* Configuration Buttons Row - 2x2 grid across 2 rows */}
+      {/* Configuration Buttons Row */}
       {!inlineSections && (
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           {/* Authentication Button */}
           <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
             <DialogTrigger
               render={
-                <Button
-                  data-testid="connection-form-auth-button"
-                  variant="outline"
-                  className={cn(
-                    (clientId || clientSecret || scope) && "border-2",
-                    "w-full justify-center hover:text-white cursor-pointer",
-                    buttonClassName
-                  )}
-                >
-                  <Shield className="w-4 h-4 mr-0" />
-                  Authentication
-                </Button>
+                <div className="relative flex-1 ">
+                  <Button
+                    data-testid="connection-form-auth-button"
+                    variant="outline"
+                    className={cn(
+                      (clientId || clientSecret || scope) && "border-2",
+                      "w-full justify-center hover:text-white cursor-pointer",
+                      buttonClassName
+                    )}
+                  >
+                    <Shield className="w-4 h-4 mr-0" />
+                    Authentication
+                  </Button>
+                </div>
               }
               nativeButton={false}
             />
@@ -705,17 +707,19 @@ export function ConnectionSettingsForm({
           <Dialog open={headersDialogOpen} onOpenChange={setHeadersDialogOpen}>
             <DialogTrigger
               render={
-                <Button
-                  data-testid="connection-form-headers-button"
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-center hover:text-white cursor-pointer",
-                    buttonClassName
-                  )}
-                >
-                  <FileText className="w-4 h-4" />
-                  Custom Headers
-                </Button>
+                <div className="relative flex-1 ">
+                  <Button
+                    data-testid="connection-form-headers-button"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-center hover:text-white cursor-pointer",
+                      buttonClassName
+                    )}
+                  >
+                    <FileText className="w-4 h-4" />
+                    Custom Headers
+                  </Button>
+                </div>
               }
               nativeButton={false}
             />
@@ -742,7 +746,7 @@ export function ConnectionSettingsForm({
                   data-testid="connection-form-config-button"
                   variant="outline"
                   className={cn(
-                    "w-full justify-center hover:text-white cursor-pointer",
+                    "flex-1  justify-center hover:text-white cursor-pointer",
                     buttonClassName
                   )}
                 >
@@ -767,21 +771,9 @@ export function ConnectionSettingsForm({
             </DialogContent>
           </Dialog>
 
-          {/* fork: feat 11 local cors proxy button */}
-          <LocalProxyHelpModal
-            trigger={
-              <Button
-                data-testid="connection-form-local-proxy-button"
-                variant="outline"
-                className={cn(
-                  "w-full justify-center hover:text-white cursor-pointer",
-                  buttonClassName
-                )}
-              >
-                <Terminal className="w-4 h-4" />
-                Local Proxy
-              </Button>
-            }
+          {/* fork: local cors proxy button */}
+          <LocalProxyButton
+            buttonClassName={buttonClassName}
             onApplyProxyAddress={setProxyAddress}
             currentProxyAddress={proxyAddress}
           />

@@ -9,6 +9,7 @@ import {
 } from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
 import { Badge } from "@/client/components/ui/badge";
+import { cn } from "@/client/lib/utils";
 import { copyToClipboard } from "@/client/utils/browser";
 import {
   Check,
@@ -195,5 +196,35 @@ export function LocalProxyHelpModal({
         </DialogBody>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function LocalProxyButton({
+  buttonClassName,
+  onApplyProxyAddress,
+  currentProxyAddress,
+}: {
+  buttonClassName?: string;
+  onApplyProxyAddress?: (address: string) => void;
+  currentProxyAddress?: string;
+}) {
+  return (
+    <LocalProxyHelpModal
+      trigger={
+        <Button
+          data-testid="connection-form-local-proxy-button"
+          variant="outline"
+          className={cn(
+            "w-full justify-center hover:text-white cursor-pointer",
+            buttonClassName
+          )}
+        >
+          <Terminal className="w-4 h-4" />
+          Local Proxy
+        </Button>
+      }
+      onApplyProxyAddress={onApplyProxyAddress}
+      currentProxyAddress={currentProxyAddress}
+    />
   );
 }
