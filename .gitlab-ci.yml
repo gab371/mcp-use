@@ -1,0 +1,66 @@
+# GitLab CI configuration for deploying MCP Inspector Standalone to GitLab Pages
+
+stages:
+  - deploy
+
+variables:
+  MCP_USE_ANONYMIZED_TELEMETRY: "false"
+
+pages:
+  stage: deploy
+  image: node:24-bookworm
+  cache:
+    key:
+      files:
+        - libraries/typescript/pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate || npm install -g pnpm
+    - export PNPM_HOME="$CI_PROJECT_DIR/.pnpm"
+    - export PATH="$PNPM_HOME:$PATH"
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - cd libraries/typescript
+    - pnpm install --no-frozen-lockfile
+    - pnpm --filter @mcp-use/client build
+    - pnpm --filter @mcp-use/agent build
+    - MCP_USE_ANONYMIZED_TELEMETRY=false pnpm --filter @mcp-use/inspector exec vite build --config vite.config.ts --base ./
+    - cd ../..
+    - mkdir -p public/inspector/evals
+    - cp -r libraries/typescript/packages/inspector/dist/web/* public/inspector/
+    - cp -r .evals/* public/inspector/evals/
+    - |
+      node -e '
+        const fs = require("fs"), path = require("path");
+        const dir = "public/inspector/evals/suites";
+        if (!fs.existsSync(dir)) process.exit(0);
+        const suites = [];
+        function walk(d) {
+          for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+            const p = path.join(d, f.name);
+            if (f.isDirectory() && f.name !== "golden") walk(p);
+            else if (f.isFile() && f.name.endsWith(".yaml")) {
+              const rel = path.relative(dir, p).replace(/\\/g, "/").replace(/\.yaml$/, "");
+              const yaml = fs.readFileSync(p, "utf-8");
+              const m = yaml.match(/^name:\s*["\x27]?([^\r\n"\x27]+)/m);
+              suites.push({ id: rel, name: m ? m[1].trim() : rel });
+            }
+          }
+        }
+        walk(dir);
+        suites.sort((a, b) => a.id.localeCompare(b.id));
+        fs.writeFileSync("public/inspector/evals/suites.json", JSON.stringify({ suites }, null, 2));
+      '
+    - cp public/inspector/index.html public/inspector/404.html
+    - echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=./inspector/"><script>window.location.replace("./inspector/" + window.location.search + window.location.hash);</script></head><body><p>Redirecting to <a href="./inspector/">/inspector/</a>...</p></body></html>' > public/index.html
+    - cp public/index.html public/404.html
+  artifacts:
+    paths:
+      - public
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "fork/main"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
