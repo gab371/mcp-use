@@ -27,6 +27,7 @@ Explore the complete guides by domain:
 | 🎭 [**Host Profiles Guide**](host-profiles.md) | High-fidelity client emulation for ChatGPT, Claude, and Claude Desktop. | Dynamic `_meta` injection (`openai/subject`, `locale`, GPS), CSS variables, widget preview, `window.openai` shim. |
 | 🔐 [**OAuth & Confidential Clients Guide**](oauth.md) | Enterprise authentication with Okta, Ping Identity, and Azure AD. | `client_secret_basic` method, isolated browser secret store, BFF proxy, RFC 6749 §2.3 compliance. |
 | 🛡️ [**Local CORS Proxy Guide**](local-cors-proxy.md) | Zero-dependency local proxy to bypass CORS in standalone / static mode. | Loopback execution (`127.0.0.1:3020`), Private Network Access, Ollama, macOS/Windows scripts. |
+| 📊 [**Upstream Diff & Hooking Study**](studies/upstream-diff-and-hooks-study.md) | Audit of all lines of code modified outside of `/fork`. | Line count breakdown, hook locations, rebase immunity analysis. |
 
 ---
 
