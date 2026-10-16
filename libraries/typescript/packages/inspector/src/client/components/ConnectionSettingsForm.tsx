@@ -779,7 +779,7 @@ export function ConnectionSettingsForm({
                 )}
               >
                 <Terminal className="w-4 h-4" />
-                Proxy Local
+                Local Proxy
               </Button>
             }
             onApplyProxyAddress={setProxyAddress}

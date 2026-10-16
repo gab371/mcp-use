@@ -40,13 +40,13 @@ export function LocalProxyAlert({
           onClick={() => setModalOpen(true)}
         >
           <HelpCircle className="w-3 h-3" />
-          Guide & Commandes
+          Help & Commands
         </Button>
       </div>
 
       <p className="text-muted-foreground text-[11px] leading-relaxed">
-        Pour inspecter vos serveurs locaux (Ollama, MCP direct) depuis cette page statique sans restriction CORS,
-        lancez le proxy Node local sur votre poste (<code>./scripts/fork/run-cors-proxy.sh</code> ou <code>scripts\fork\run-cors-proxy.bat</code>).
+        To inspect local servers (Ollama, direct MCP) from this static page without CORS restrictions,
+        run the local Node proxy on your machine (<code>./scripts/fork/run-cors-proxy.sh</code> or <code>scripts\fork\run-cors-proxy.bat</code>).
       </p>
 
       {proxyAddress.trim() !== defaultProxyUrl && (
@@ -59,7 +59,7 @@ export function LocalProxyAlert({
             onClick={() => setProxyAddress(defaultProxyUrl)}
           >
             <Wand2 className="w-3 h-3 text-sky-400" />
-            Définir l'adresse par défaut (<code>{defaultProxyUrl}</code>)
+            Set default endpoint (<code>{defaultProxyUrl}</code>)
           </Button>
         </div>
       )}

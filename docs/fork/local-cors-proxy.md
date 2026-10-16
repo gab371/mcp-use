@@ -1,81 +1,79 @@
 # Local CORS Proxy Guide (Standalone & Local Dev)
 
-> **Contourner les restrictions CORS en mode Standalone (GitLab Pages / Hébergement Statique)**  
-> 100% local, aucune dépendance externe, zéro fuite de données vers l'extérieur.
+> **Bypass browser CORS restrictions in Standalone mode (GitLab Pages / Static Hosting)**  
+> 100% local, zero external npm dependencies, no data leaves your machine.
 
 ---
 
-## 1. Pourquoi ce proxy local ?
+## 1. Why is this proxy needed?
 
-Lorsque l'Inspector MCP s'exécute dans un navigateur depuis une origine HTTPS publique ou distante (ex: `https://mcp-use-fork-417a01.pages.gitlab.disney.com/`) :
-- **Same-Origin Policy & CORS** : Le navigateur refuse les requêtes directes vers des serveurs locaux (`https://localhost:8443`, `http://localhost:11434` pour Ollama, API OpenAI compatibles) si ces derniers ne renvoient pas les en-têtes `Access-Control-Allow-Origin` adéquats.
-- **Private Network Access (PNA)** : Chrome bloque les requêtes provenant d'un contexte public vers une IP privée ou loopback (`127.0.0.1` / `localhost`) à moins que le serveur ne réponde avec `Access-Control-Allow-Private-Network: true`.
-- **Filtrage d'origine côté serveur (`ALLOWED_ORIGINS`)** : Même si le serveur dispose d'une liste blanche d'origines, un proxy local supprime le header `origin` lors du transfert pour que le serveur traite la requête comme un appel interne serveur-à-serveur.
+When the MCP Inspector runs directly in the browser from a public or remote HTTPS origin (e.g. `https://mcp-use-fork-417a01.pages.gitlab.disney.com/`):
+- **Same-Origin Policy & CORS**: The browser rejects direct HTTP/HTTPS requests to local servers (`https://localhost:8443`, `http://localhost:11434` for Ollama, OpenAI-compatible APIs) unless they explicitly return valid `Access-Control-Allow-Origin` headers.
+- **Private Network Access (PNA)**: Chromium browsers block requests initiated from a public HTTPS context to private or loopback addresses (`127.0.0.1` / `localhost`) unless the target server returns `Access-Control-Allow-Private-Network: true`.
+- **Target Server Origin Filtering (`ALLOWED_ORIGINS`)**: Even if the target server restricts origins, the local proxy strips the client's `origin` header so the target treats the request as a direct, trusted server-to-server call.
 
-Le **Local CORS Proxy** inclus dans ce fork résout ces trois problèmes en s'exécutant sur votre machine en écoute sur `127.0.0.1:3020`.
+The **Local CORS Proxy** provided in this fork solves all three constraints by running purely on loopback (`127.0.0.1:3020`).
 
 ---
 
-## 2. Démarrage rapide
+## 2. Quick Start
 
-Le proxy est écrit en Node.js pur (bibliothèque standard `node:http` et `node:https`) : **aucune installation npm n'est requise**.
+The proxy is implemented using pure Node.js standard library (`node:http` and `node:https`): **no `npm install` required**.
 
-### Sur macOS & Linux
+### macOS & Linux
 ```bash
-# Lancement avec le port par défaut (3020) :
+# Start with default port (3020):
 ./scripts/fork/run-cors-proxy.sh
 
-# Lancement sur un port personnalisé :
+# Start with a custom port:
 ./scripts/fork/run-cors-proxy.sh 3050
 ```
 
-### Sur Windows
-- **Invite de commandes (CMD) ou double-clic** :
+### Windows
+- **Command Prompt (CMD) or double-click**:
   ```cmd
   scripts\fork\run-cors-proxy.bat
-  # Port personnalisé :
+  # Custom port:
   scripts\fork\run-cors-proxy.bat 3050
   ```
-- **PowerShell** :
+- **PowerShell**:
   ```powershell
   .\scripts\fork\run-cors-proxy.ps1
-  # Port personnalisé :
+  # Custom port:
   .\scripts\fork\run-cors-proxy.ps1 3050
   ```
 
 ---
 
-## 3. Configuration dans l'Inspector MCP
+## 3. Inspector Configuration
 
-Dans le formulaire de connexion de l'Inspector (Dashboard ou Onglet *Connection Settings*) :
+In the Inspector connection form (Dashboard or *Connection Settings* tab):
 
-1. Définissez l'**URL du serveur cible** :
-   - Ex: `https://localhost:8443/mcp`
-   - Ou Ollama : `http://localhost:11434`
-2. Ouvrez la section **Configuration** :
-   - **Connection Mode** : `Proxy` (ou `Auto`)
-   - **Proxy Endpoint** : `http://localhost:3020` (ou votre port configuré)
-3. Cliquez sur **Connect** ou **Save**.
+1. Enter your **Target Server URL**:
+   - E.g.: `https://localhost:8443/mcp`
+   - Or Ollama: `http://localhost:11434`
+2. Open the **Configuration** section:
+   - **Connection Mode**: `Proxy` (or `Auto`)
+   - **Proxy Endpoint**: `http://localhost:3020` (or your chosen port)
+3. Click **Connect** or **Save**.
 
-Toutes les requêtes de l'Inspector transiteront alors par votre proxy local sur votre machine, qui s'occupe de relayer le trafic et d'ajouter les en-têtes CORS nécessaires.
+All requests from the Inspector will now route through the local proxy running on your machine, which handles CORS headers and transparent stream forwarding.
 
 ---
 
-## 4. Cas d'usage : Ollama en local
+## 4. Example: Connecting to Local Ollama
 
-Si vous connectez un serveur Ollama local :
+### Option A: With the Local CORS Proxy
+Start Ollama normally, and set `Proxy Endpoint: http://localhost:3020` in the Inspector.
 
-### Option A : Avec le Local CORS Proxy
-Démarrez Ollama normalement, puis configurez l'Inspector avec `Proxy Endpoint: http://localhost:3020`.
-
-### Option B : Sans proxy (en autorisant les origines dans Ollama)
-Sur **macOS / Linux** (`zsh`) :
+### Option B: Without Proxy (allowing origins in Ollama directly)
+On **macOS / Linux** (`zsh`):
 ```zsh
 OLLAMA_ORIGINS="*" ollama serve
 ```
-*(Si Ollama tourne via l'application Mac dans la barre des menus : `launchctl setenv OLLAMA_ORIGINS "*"` puis quittez et relancez l'app).*
+*(If Ollama runs via the macOS menubar application: execute `launchctl setenv OLLAMA_ORIGINS "*"` and quit & restart the Ollama app).*
 
-Sur **Windows** (PowerShell) :
+On **Windows** (PowerShell):
 ```powershell
 $env:OLLAMA_ORIGINS="*"
 ollama serve
@@ -83,8 +81,8 @@ ollama serve
 
 ---
 
-## 5. Sécurité & Confidentialité
+## 5. Security & Privacy
 
-- **Loopback strict (`127.0.0.1`)** : Le proxy n'écoute pas sur les interfaces réseau publiques.
-- **Zéro télémétrie** : Aucune donnée, URL ou payload n'est envoyé à des serveurs tiers.
-- **Certificats locaux** : Le proxy autorise automatiquement les certificats auto-signés locaux (`localhost`, `127.0.0.1`, `.local`) pour simplifier le développement avec `mkcert`.
+- **Strict Loopback (`127.0.0.1`)**: The proxy binds exclusively to loopback and does not expose ports on external network interfaces.
+- **Zero Telemetry**: No payloads, URLs, or headers are transmitted outside your local environment.
+- **Local Certificates**: Self-signed certificates on `localhost`, `127.0.0.1`, and `.local` are automatically trusted for development with tools like `mkcert`.
