@@ -23,6 +23,18 @@ const MAX_STORED_RUNS = 50;
 
 let backendAvailable: boolean | null = null;
 
+// Helper to fetch static evals in standalone mode (/inspector/evals/... then fallback ./evals/...)
+async function fetchStaticEval(subpath: string): Promise<Response> {
+  const clean = subpath.replace(/^\/+/, "");
+  try {
+    const res = await fetch(`/inspector/evals/${clean}`);
+    if (res.ok) return res;
+  } catch {
+    // fallback below
+  }
+  return fetch(`./evals/${clean}`);
+}
+
 // Helper to access browser storage safely
 function getLocalItem<T>(key: string, fallback: T): T {
   if (typeof window === "undefined" || !window.localStorage) return fallback;
@@ -93,7 +105,7 @@ export const evalsClientStorage = {
 
     // Static Pages fallback: fetch published evals manifest
     try {
-      const staticRes = await fetch("./evals/suites.json");
+      const staticRes = await fetchStaticEval("suites.json");
       if (staticRes.ok) {
         const data = await staticRes.json();
         const store = ensureBrowserSuites();
@@ -167,7 +179,7 @@ export const evalsClientStorage = {
 
     // 2. Fetch published static YAML from Pages
     try {
-      const yamlRes = await fetch(`./evals/suites/${id}.yaml`);
+      const yamlRes = await fetchStaticEval(`suites/${id}.yaml`);
       if (yamlRes.ok) {
         const yaml = await yamlRes.text();
         const parsed = parseSuiteYaml(yaml);
@@ -257,7 +269,7 @@ export const evalsClientStorage = {
     // Static Pages fallback: fetch published golden file
     try {
       const suiteDir = suiteId.includes("/") ? suiteId.substring(0, suiteId.lastIndexOf("/")) : suiteId;
-      const res = await fetch(`./evals/suites/${suiteDir}/golden/${encodeURIComponent(relPath)}`);
+      const res = await fetchStaticEval(`suites/${suiteDir}/golden/${encodeURIComponent(relPath)}`);
       if (res.ok) return await res.text();
     } catch {
       // Ignore fetch error

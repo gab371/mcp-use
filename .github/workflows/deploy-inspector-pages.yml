@@ -10,12 +10,14 @@ on:
       - "libraries/typescript/packages/inspector/**"
       - "libraries/typescript/packages/client/**"
       - "libraries/typescript/packages/agent/**"
+      - ".evals/**"
       - ".github/workflows/deploy-inspector-pages.yml"
   pull_request:
     paths:
       - "libraries/typescript/packages/inspector/**"
       - "libraries/typescript/packages/client/**"
       - "libraries/typescript/packages/agent/**"
+      - ".evals/**"
   workflow_dispatch:
 
 permissions:

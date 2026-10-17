@@ -47,8 +47,9 @@ Enhanced mcp-use inspector with: host profiles emulation, evaluations testbench,
 | `libraries/typescript/packages/inspector/src/server/create-dev-api-app.ts` | Mount evals API routes in dev mode; mount static oauth client routes | Evals, OAuth |
 | `libraries/typescript/packages/inspector/src/server/inspector-shell.ts` | Default anonymized telemetry to false | Cloud Removal |
 | `libraries/typescript/packages/inspector/src/server/proxy/oauth-proxy.ts` | Fall back to static client in applyConfidentialClientAuthentication and export canonicalUrl | OAuth |
+| `libraries/typescript/packages/inspector/vite.config.ts` | Register forkStaticEvalsPlugin (copy eval suites + generate suites.json into web build) | Evals |
 
-`git grep -n "fork:"` lists exactly the hook points in these 21 files.
+`git grep -n "fork:"` lists exactly the hook points in these 22 files.
 
 ## Update routine
 

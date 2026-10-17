@@ -5,6 +5,7 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import { hasNoOpenFlag, parsePortFromArgs } from "./src/server/utils.js";
 import { inspectorDevApiPlugin } from "./src/server/vite-dev-api-plugin.js";
+import { forkStaticEvalsPlugin } from "./src/server/fork/evals/static-evals-vite-plugin.js"; // fork: feat evals standalone static copy
 import { getDevCallbackRedirect } from "./src/server/dev-callback-redirect.js";
 
 // Read version from package.json
@@ -24,6 +25,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     inspectorDevApiPlugin(),
+    forkStaticEvalsPlugin(), // fork: feat evals standalone static copy
     {
       name: "inspector-dev-banner",
       configureServer(server) {

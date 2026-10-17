@@ -127,6 +127,10 @@ Evaluation suites are organized under `.evals/suites/` at the repository root:
 
 Relative paths in YAML suites are automatically resolved relative to the suite directory by the fork server API.
 
+### Standalone deployment (Pages / static Docker)
+
+The web build bundles the eval suites automatically: `forkStaticEvalsPlugin` (registered in `vite.config.ts`) copies `EVALS_DATA_DIR/suites` (default: the repository `.evals/` directory, same variable as the server API) into `dist/web/evals/` and generates the `suites.json` manifest the UI fetches when no backend is available. A plain `vite build` is therefore enough for GitHub Pages, GitLab Pages, or a static container — no extra CI step, no manually generated manifest. In docker-compose mode the backend API serves the mounted `.evals/` volume directly, so both deployment styles see the same suites.
+
 ---
 
 ## 6. Using the Evals Tab in the Inspector
