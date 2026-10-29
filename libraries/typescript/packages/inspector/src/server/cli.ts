@@ -16,6 +16,7 @@ import {
 import { getInspectorVersion } from "./version.js";
 
 const args = process.argv.slice(2);
+if (args[0] === "evals") { (globalThis as any).require ??= (await import("node:module")).createRequire(import.meta.url); process.exit(await (await import("./fork/evals/cli.js")).runCli(args.slice(1))); } // fork: feat 02 headless evals subcommand
 let mcpUrl: string | undefined;
 let startPort = 8080;
 let noOpen = false;
