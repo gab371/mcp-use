@@ -43,7 +43,7 @@ Enhanced mcp-use inspector with: host profiles emulation, evaluations testbench,
 | `libraries/typescript/packages/inspector/src/client/context/InspectorContext.tsx` | Disable fallback to `cloud.manufact.com` and disable free-tier upgrade prompts; register evals in TabType | Cloud Removal, Evals |
 | `libraries/typescript/packages/inspector/src/client/hooks/useMcpAppsHostContext.ts` | Overlay profile hostContext via `applyHostProfile` | Host Profiles |
 | `libraries/typescript/packages/inspector/src/client/hooks/useViewHostProps.tsx` | Pass profile hostInfo, hostCapabilities, and openaiShim | Host Profiles |
-| `libraries/typescript/packages/inspector/src/server/cli.ts` | Mount evals API routes; mount static oauth client routes | Evals, OAuth |
+| `libraries/typescript/packages/inspector/src/server/cli.ts` | Mount evals API routes; dispatch headless evals subcommand; mount static oauth client routes | Evals, OAuth |
 | `libraries/typescript/packages/inspector/src/server/create-dev-api-app.ts` | Mount evals API routes in dev mode; mount static oauth client routes | Evals, OAuth |
 | `libraries/typescript/packages/inspector/src/server/inspector-shell.ts` | Default anonymized telemetry to false | Cloud Removal |
 | `libraries/typescript/packages/inspector/src/server/proxy/oauth-proxy.ts` | Fall back to static client in applyConfidentialClientAuthentication and export canonicalUrl | OAuth |

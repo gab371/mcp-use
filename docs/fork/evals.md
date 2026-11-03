@@ -171,3 +171,82 @@ When managing multiple MCP servers, you can associate each connection with dedic
    - Dropdown menus cleanly group suites into `MCP suites` and `Global suites`.
 3. **Targeted Creation:**
    - The **"+ New Suite"** button pre-selects the MCP's default folder, ensuring new test suites and golden assets are stored in the proper directory.
+
+---
+
+## 8. Headless CLI Execution (`evals` Subcommand)
+
+The Inspector CLI binary includes a headless `evals` subcommand. This allows running evaluation suites headlessly against MCP servers in automated CI/CD pipelines and terminal workflows without starting the web UI or opening a browser.
+
+### Basic Usage
+
+```bash
+# Run a suite against an MCP server using default model (gpt-4o) and OpenAI
+mcp-inspect evals --suite .evals/suites/sample-suite.yaml --url http://localhost:3000/mcp
+
+# Using npx or node directly
+npx @mcp-use/inspector evals --suite .evals/suites/sample-suite.yaml --url http://localhost:3000/mcp
+
+# Specify provider, model, API key, and output path
+mcp-inspect evals \
+  --suite .evals/suites/catalog.yaml \
+  --url https://mcp.internal.example/mcp \
+  --provider anthropic \
+  --model claude-3-7-sonnet-20250219 \
+  --output .evals/runs/catalog-report.json
+```
+
+### CLI Options
+
+```
+Usage: mcp-inspect evals --suite <suite.yaml> --url <mcp-url> [options]
+
+Options:
+  --suite <path>       Path to suite YAML file (required)
+  --url <url>          MCP server URL to evaluate (required)
+  --model <model>      Model identifier (default: gpt-4o)
+  --provider <prov>    LLM provider: openai, anthropic, ollama, etc. (default: openai)
+  --api-key <key>      API key for LLM provider (or use env vars)
+  --base-url <url>     Base URL for OpenAI-compatible providers
+  --output <path>      Save run output JSON to path
+  --iterations <N>     Override iteration count
+  --header <k=v>       Custom HTTP header for the MCP connection (repeatable)
+  -h, --help           Show this help message
+```
+
+### Environment Variables Fallback
+
+If not explicitly passed via flags, the CLI automatically falls back to standard environment variables:
+- `LLM_MODEL`: Model identifier (defaults to `gpt-4o`).
+- `LLM_PROVIDER`: Provider identifier (defaults to `openai`).
+- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`: API keys depending on the chosen provider.
+- `OPENAI_BASE_URL`: Base URL for OpenAI-compatible endpoints (vLLM, Ollama, LM Studio, etc.).
+
+### Custom Headers
+
+For endpoints requiring authentication tokens or custom headers, `--header` can be passed multiple times:
+
+```bash
+mcp-inspect evals \
+  --suite .evals/suites/auth-suite.yaml \
+  --url https://mcp.internal.example/mcp \
+  --header "Authorization=Bearer s3cr3t-t0k3n" \
+  --header "X-Custom-Tenant=staging"
+```
+
+### Exit Codes
+
+The CLI emits standardized exit codes for CI/CD assertions:
+
+| Exit Code | Status | Meaning |
+|---|---|---|
+| `0` | **Passed** | All evaluated cases passed according to suite thresholds. |
+| `1` | **Failed** | One or more test cases failed assertion checks. |
+| `2` | **Invalid Arguments** | Missing required flags (`--suite`, `--url`) or malformed parameters. |
+| `3` | **Connection Error** | Failed to connect to the target MCP server or setup failed. |
+| `4` | **Inconclusive** | Results were indeterminate (e.g., inconclusive iterations or errors). |
+
+### Output JSON Report
+
+When `--output <path>` is provided, a comprehensive JSON report is generated containing the complete run verdict, tool snapshot hash, timings, token counts, and per-case assertion breakdown.
+

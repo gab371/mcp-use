@@ -1,5 +1,5 @@
 import { MCPAgent, providerConfigFromOptions, type McpConnectionLike } from "@mcp-use/agent";
-import { isToolVisibleToModel } from "@mcp-use/client/react";
+import { isToolVisibleToModel } from "./tool-visibility";
 import type { EvalCase, EvalSuiteDefaults } from "./suite";
 import type { ToolCallRecord, Transcript } from "./checks";
 
@@ -48,6 +48,7 @@ export async function runCase(
   // 2. Wrap connection to accurately capture tool calls and timings
   const wrappedConnection: McpConnectionLike = {
     ...connection,
+    tools: connection.tools,
     callTool: async (toolName, args, callOpts) => {
       const callStart = Date.now();
       const record: ToolCallRecord = {
