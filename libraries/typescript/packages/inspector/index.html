@@ -2,6 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Single Page Application (SPA) route restoration for static hosting (GitLab Pages / GitHub Pages)
+      (function() {
+        try {
+          var pathname = window.location.pathname;
+          // Heal any looped /inspector/inspector/... paths in the browser address bar
+          if (/\/inspector\/inspector/.test(pathname)) {
+            var healed = pathname.replace(/(\/inspector)+/g, "/inspector");
+            window.history.replaceState(null, "", healed + window.location.search + window.location.hash);
+            pathname = healed;
+          }
+
+          var params = new URLSearchParams(window.location.search);
+          var spaRoute = params.get("_spa_route");
+          if (spaRoute) {
+            params.delete("_spa_route");
+            var remaining = params.toString();
+            var targetPath = spaRoute.startsWith("/") ? spaRoute : "/" + spaRoute;
+            var currentBase = pathname.replace(/\/+$/, "").replace(/(\/inspector)+/g, "/inspector");
+            if (!currentBase.endsWith("/inspector")) {
+              currentBase += "/inspector";
+            }
+            var newUrl = currentBase + targetPath + (remaining ? "?" + remaining : "") + window.location.hash;
+            window.history.replaceState(null, "", newUrl);
+          }
+        } catch (e) {
+          console.error("[SPA] Route restoration error:", e);
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon-black.svg?v=4" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

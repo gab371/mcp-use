@@ -30,11 +30,7 @@ pages:
     # The Vite build already bundles .evals/suites and generates evals/suites.json
     # (see forkStaticEvalsPlugin) so the static site is self-contained.
     - cd ../..
-    - mkdir -p public/inspector
-    - cp -r libraries/typescript/packages/inspector/dist/web/* public/inspector/
-    - cp public/inspector/index.html public/inspector/404.html
-    - echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=./inspector/"><script>window.location.replace("./inspector/" + window.location.search + window.location.hash);</script></head><body><p>Redirecting to <a href="./inspector/">/inspector/</a>...</p></body></html>' > public/index.html
-    - cp public/index.html public/404.html
+    - node scripts/fork/generate-gitlab-pages.mjs
   artifacts:
     paths:
       - public

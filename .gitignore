@@ -191,3 +191,4 @@ TODO.md
 .pnpm-store/
 .mcp-use/
 .evals/runs/
+public/
