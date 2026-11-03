@@ -23,7 +23,7 @@ Explore the complete guides by domain:
 
 | Guide | Description | Key Topics |
 |---|---|---|
-| 🧪 [**Evaluations Guide (Evals)**](evals.md) | Automated testbench for MCP servers and LLM models. | YAML suites, assertions (`toolCalled`, `goldenResult`, `goldenAnswer`, `argsNeverContain`), 1-click capture, UI runner, run history. |
+| 🧪 [**Evaluations Guide (Evals)**](evals.md) | Automated testbench for MCP servers and LLM models. | YAML suites, assertions (`toolCalled`, `goldenResult`, `goldenAnswer`, `argsNeverContain`), 1-click capture, UI runner, headless CLI (`evals`), run history. |
 | 🎭 [**Host Profiles Guide**](host-profiles.md) | High-fidelity client emulation for ChatGPT, Claude, and Claude Desktop. | Dynamic `_meta` injection (`openai/subject`, `locale`, GPS), CSS variables, widget preview, `window.openai` shim. |
 | 🔐 [**OAuth & Confidential Clients Guide**](oauth.md) | Enterprise authentication with Okta, Ping Identity, and Azure AD. | `client_secret_basic` method, isolated browser secret store, BFF proxy, RFC 6749 §2.3 compliance. |
 | 🛡️ [**Local CORS Proxy Guide**](local-cors-proxy.md) | Zero-dependency local proxy to bypass CORS in standalone / static mode. | Loopback execution (`127.0.0.1:3020`), Private Network Access, Ollama, macOS/Windows scripts. |
@@ -73,7 +73,19 @@ node libraries/typescript/packages/inspector/dist/cli.js --port 3000
 
 ---
 
-### Option 3: Docker Container
+### Option 3: Run Headless Evaluations (CI/CD)
+To evaluate an MCP server headlessly without launching the browser UI:
+
+```bash
+# Run an eval suite with output report
+node libraries/typescript/packages/inspector/dist/cli.js evals \
+  --suite .evals/suites/sample-suite.yaml \
+  --url http://localhost:3000/mcp \
+  --output .evals/runs/report.json
+```
+---
+
+### Option 4: Docker Container
 A production-ready Docker image is available for containerized internal deployments:
 
 ```bash
