@@ -26,7 +26,13 @@ fi
 echo "🐳 Starting Apache2 container..."
 docker compose -f "$COMPOSE_FILE" up -d --force-recreate
 
+if ! lsof -i :3020 >/dev/null 2>&1; then
+  echo "🔒 Starting Local CORS Proxy on http://127.0.0.1:3020..."
+  nohup node "${ROOT_DIR}/scripts/fork/cors-proxy.mjs" >/tmp/mcp-cors-proxy.log 2>&1 &
+fi
+
 echo ""
 echo "🚀 MCP Inspector Standalone is running:"
 echo "👉 http://localhost:8085/inspector/"
 echo "👉 http://localhost:8085/ (redirects to /inspector/)"
+echo "🔒 Local CORS Proxy: http://localhost:3020"

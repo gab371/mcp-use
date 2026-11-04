@@ -1,6 +1,10 @@
-import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
+
+const SPA_ENTRY_RESTORE_SCRIPT = `(function(){try{var p=location.pathname.replace(/(\\/inspector)+/g,"/inspector");if(p!==location.pathname){history.replaceState(null,"",p+location.search+location.hash);}var i=p.indexOf("/inspector");if(i!==-1){var b=document.createElement("base");b.href=p.slice(0,i+10)+"/";document.head.appendChild(b);}var m=p.match(/^(.*\\/inspector)\\/(.+)$/);if(m){sessionStorage.setItem("__fork_spa_path",p.replace(/\\/+$/,"")+location.search+location.hash);location.replace(m[1]+"/");return;}var s=sessionStorage.getItem("__fork_spa_path");if(s){sessionStorage.removeItem("__fork_spa_path");history.replaceState(null,"",s);}}catch(e){}})();`;
+
+const SPA_CALLBACK_REDIRECT_HTML = `<!doctype html><html><head><meta charset="utf-8"><script>${SPA_ENTRY_RESTORE_SCRIPT}</script></head><body></body></html>\n`;
 
 interface StaticSuiteManifestEntry {
   id: string;
@@ -73,8 +77,22 @@ export function forkStaticEvalsPlugin(): Plugin {
       configRoot = config.root;
       webOutDir = path.resolve(config.root, config.build.outDir || "dist");
     },
+    transformIndexHtml() {
+      return [
+        {
+          tag: "script",
+          children: SPA_ENTRY_RESTORE_SCRIPT,
+          injectTo: "head-prepend",
+        },
+      ];
+    },
     closeBundle() {
       if (!webOutDir) return;
+      for (const sub of ["oauth/callback", "auth/callback"]) {
+        const dir = path.join(webOutDir, sub);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(path.join(dir, "index.html"), SPA_CALLBACK_REDIRECT_HTML);
+      }
       const evalsDir = process.env.EVALS_DATA_DIR
         ? path.resolve(process.env.EVALS_DATA_DIR)
         : findDefaultEvalsDir(configRoot);

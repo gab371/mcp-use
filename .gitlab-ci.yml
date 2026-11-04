@@ -32,9 +32,26 @@ pages:
     - cd ../..
     - mkdir -p public/inspector
     - cp -r libraries/typescript/packages/inspector/dist/web/* public/inspector/
-    - cp public/inspector/index.html public/inspector/404.html
-    - echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=./inspector/"><script>window.location.replace("./inspector/" + window.location.search + window.location.hash);</script></head><body><p>Redirecting to <a href="./inspector/">/inspector/</a>...</p></body></html>' > public/index.html
+    - |
+      cat << 'EOF' > public/index.html
+      <!DOCTYPE html><html><head><meta charset="utf-8"><script>
+      (function(){
+        var p = location.pathname.replace(/\/index\.html$/, "").replace(/(\/inspector)+/g, "/inspector");
+        var i = p.indexOf("/inspector");
+        if (i !== -1) {
+          var b = p.slice(0, i) + "/inspector";
+          var r = p.slice(i + 10).replace(/^\/+|\/+$/g, "");
+          if (r) sessionStorage.setItem("__fork_spa_path", b + "/" + r + location.search + location.hash);
+          var t = b + "/" + (r ? "" : location.search + location.hash);
+          if (location.pathname + location.search + location.hash !== t) location.replace(t);
+        } else {
+          location.replace(p.replace(/\/+$/, "") + "/inspector/" + location.search + location.hash);
+        }
+      })();
+      </script></head><body><p>Redirecting to <a href="./inspector/">/inspector/</a>...</p></body></html>
+      EOF
     - cp public/index.html public/404.html
+    - cp public/index.html public/inspector/404.html
   artifacts:
     paths:
       - public
