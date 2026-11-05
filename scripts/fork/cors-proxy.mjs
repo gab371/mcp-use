@@ -167,8 +167,16 @@ const server = http.createServer((req, res) => {
   const forwardedHeaders = { ...req.headers };
   delete forwardedHeaders.host;
   delete forwardedHeaders["x-target-url"];
-  // Strip client origin so target server does not reject on its own CORS filter
+  // Strip client origin/referer/sec-fetch headers so target server (and strict IdPs like Okta)
+  // treats the request as a confidential server-to-server call rather than a browser request.
   delete forwardedHeaders.origin;
+  delete forwardedHeaders.referer;
+  for (const key of Object.keys(forwardedHeaders)) {
+    const lower = key.toLowerCase();
+    if (lower.startsWith("sec-fetch-") || lower.startsWith("sec-ch-ua")) {
+      delete forwardedHeaders[key];
+    }
+  }
 
   forwardedHeaders.host = parsedTarget.host;
 
@@ -202,10 +210,11 @@ const server = http.createServer((req, res) => {
     // Forward status and headers
     const responseHeaders = { ...proxyRes.headers };
     // Remove headers handled directly
-    delete responseHeaders["access-control-allow-origin"];
-    delete responseHeaders["access-control-allow-credentials"];
-    delete responseHeaders["access-control-allow-headers"];
-    delete responseHeaders["access-control-allow-methods"];
+    for (const key of Object.keys(responseHeaders)) {
+      if (key.toLowerCase().startsWith("access-control-")) {
+        delete responseHeaders[key];
+      }
+    }
 
     res.writeHead(proxyRes.statusCode || 200, responseHeaders);
 

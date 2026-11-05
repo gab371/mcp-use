@@ -4,6 +4,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ForkStaticClientsSync } from "../oauth-clients/ForkStaticClientsSync";
+import { getForkOAuthSecret } from "../oauth-clients/secrets-storage";
 import { toast } from "sonner";
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -284,5 +285,168 @@ describe("ForkStaticClientsSync", () => {
     expect(putCalls.length).toBe(1);
     expect(putCalls[0][1].body).toContain("https://auth.example.com/mcp");
     expect(putCalls[0][1].body).not.toContain("https://public.example.com/mcp");
+  });
+
+  it("intercepts POST /oauth/proxy in standalone mode, injects Basic auth, strips client_id, and falls back to direct fetch when local proxy is unreachable", async () => {
+    const { saveForkOAuthSecret } = await import("../oauth-clients/secrets-storage");
+    const { installStandaloneOAuthInterceptor } = await import(
+      "../oauth-clients/standalone-oauth-interceptor"
+    );
+
+    saveForkOAuthSecret("https://mcp.example.com/mcp", "okta-client", "okta-secret");
+    // Simulate local proxy :3020 not running, then direct fetch succeeding
+    fetchMock
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "tok-123", token_type: "Bearer" }), {
+          status: 200,
+          statusText: "OK",
+          headers: { "content-type": "application/json" },
+        })
+      );
+
+    installStandaloneOAuthInterceptor();
+
+    const res = await window.fetch("http://localhost:3017/inspector/api/oauth/proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        serverUrl: "https://mcp.example.com/mcp",
+        url: "https://okta.example.com/oauth2/v1/token",
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: {
+          grant_type: "authorization_code",
+          code: "auth-code-xyz",
+          client_id: "okta-client",
+        },
+      }),
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://okta.example.com/oauth2/v1/token",
+      expect.objectContaining({
+        method: "POST",
+        body: "grant_type=authorization_code&code=auth-code-xyz",
+      })
+    );
+    const forwardedHeaders = fetchMock.mock.calls[1][1]?.headers as Headers;
+    expect(forwardedHeaders.get("Authorization")).toBe(
+      `Basic ${btoa("okta-client:okta-secret")}`
+    );
+
+    const envelope = await res.json();
+    expect(envelope).toMatchObject({
+      status: 200,
+      body: { access_token: "tok-123", token_type: "Bearer" },
+    });
+  });
+
+  it("routes standalone POST /oauth/proxy through configured local CORS proxy to strip Origin header", async () => {
+    const { saveForkOAuthSecret } = await import("../oauth-clients/secrets-storage");
+    const { installStandaloneOAuthInterceptor } = await import(
+      "../oauth-clients/standalone-oauth-interceptor"
+    );
+
+    mockLocalStorage.setItem(
+      "mcp-inspector-connections",
+      JSON.stringify({
+        "https://mcp.example.com/mcp": {
+          url: "https://mcp.example.com/mcp",
+          connectionMode: "proxy",
+          proxyConfig: { proxyAddress: "http://localhost:3020" },
+        },
+      })
+    );
+
+    saveForkOAuthSecret("https://mcp.example.com/mcp", "okta-client", "okta-secret");
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ access_token: "tok-proxied", token_type: "Bearer" }), {
+        status: 200,
+        statusText: "OK",
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    installStandaloneOAuthInterceptor();
+
+    const res = await window.fetch("http://localhost:3017/inspector/api/oauth/proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        serverUrl: "https://mcp.example.com/mcp",
+        url: "https://okta.example.com/oauth2/v1/token",
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: {
+          grant_type: "authorization_code",
+          code: "auth-code-xyz",
+          code_verifier: "verifier-123",
+          client_id: "okta-client",
+        },
+      }),
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3020/?url=https%3A%2F%2Fokta.example.com%2Foauth2%2Fv1%2Ftoken",
+      expect.objectContaining({
+        method: "POST",
+        body: "grant_type=authorization_code&code=auth-code-xyz&code_verifier=verifier-123",
+      })
+    );
+
+    const envelope = await res.json();
+    expect(envelope).toMatchObject({
+      status: 200,
+      body: { access_token: "tok-proxied", token_type: "Bearer" },
+    });
+  });
+
+  it("captures client secret typed in Authentication dialog with capital S placeholder and retains it across dialog unmount", async () => {
+    mockUseMcpClient.mockReturnValue({
+      servers: [],
+      storageLoaded: true,
+    });
+
+    await act(async () => {
+      root?.render(<ForkStaticClientsSync />);
+    });
+
+    const urlInput = document.createElement("input");
+    urlInput.setAttribute("data-testid", "connection-form-url-input");
+    urlInput.value = "https://localhost:8443/mcp";
+    document.body.appendChild(urlInput);
+
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+
+    const clientIdInput = document.createElement("input");
+    clientIdInput.setAttribute("data-testid", "auth-dialog-client-id-input");
+    clientIdInput.setAttribute("placeholder", "Client ID (optional if server supports DCR)");
+    clientIdInput.value = "okta-dialog-client";
+
+    const secretInput = document.createElement("input");
+    secretInput.setAttribute("data-testid", "auth-dialog-client-secret-input");
+    secretInput.setAttribute("placeholder", "Client Secret (optional)");
+    secretInput.value = "okta-dialog-secret";
+
+    dialog.appendChild(clientIdInput);
+    dialog.appendChild(secretInput);
+    document.body.appendChild(dialog);
+
+    await act(async () => {
+      secretInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    // Simulate closing the Authentication modal before clicking Connect
+    dialog.remove();
+
+    expect(getForkOAuthSecret("https://localhost:8443/mcp", "okta-dialog-client")).toMatchObject({
+      serverUrl: "https://localhost:8443/mcp",
+      clientId: "okta-dialog-client",
+      clientSecret: "okta-dialog-secret",
+    });
+
+    urlInput.remove();
   });
 });

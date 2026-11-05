@@ -98,5 +98,7 @@ describe("fork static evals vite plugin", () => {
     plugin.configResolved?.(makeConfig(tmpDir));
     expect(() => plugin.closeBundle?.()).not.toThrow();
     expect(existsSync(path.join(tmpDir, "dist", "web", "evals", "suites.json"))).toBe(false);
+    expect(existsSync(path.join(tmpDir, "dist", "web", "oauth", "callback", "index.html"))).toBe(true);
+    expect(existsSync(path.join(tmpDir, "dist", "web", "auth", "callback", "index.html"))).toBe(true);
   });
 });

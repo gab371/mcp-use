@@ -5,8 +5,9 @@ WORKDIR /repo
 
 RUN npm install -g pnpm@10.28.0
 
-# Copy TypeScript monorepo source
+# Copy TypeScript monorepo source and bundled eval suites
 COPY libraries/typescript ./libraries/typescript
+COPY .evals ./.evals
 
 WORKDIR /repo/libraries/typescript
 

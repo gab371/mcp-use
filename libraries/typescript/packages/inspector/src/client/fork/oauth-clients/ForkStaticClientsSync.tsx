@@ -3,7 +3,6 @@ import { useMcpClient } from "@mcp-use/client/react";
 import { toast } from "sonner";
 import { inspectorApi } from "@/client/utils/basePath";
 import {
-  getAllForkOAuthSecrets,
   getForkOAuthSecret,
   removeForkOAuthSecret,
   saveForkOAuthSecret,
@@ -16,6 +15,10 @@ interface SyncedClientEntry {
   clientSecret: string;
 }
 
+// Install interceptor immediately on module import so early routes (like /inspector/oauth/callback)
+// that return before mounting <ForkStaticClientsSync /> still intercept OAuth proxy/token requests.
+installStandaloneOAuthInterceptor();
+
 /**
  * Syncs confidential client secrets configured in the Inspector connection form / localStorage
  * to the server-side OAuth BFF registry (/inspector/api/fork/oauth/clients) when a backend is available,
@@ -23,7 +26,10 @@ interface SyncedClientEntry {
  * for standalone mode.
  */
 export function ForkStaticClientsSync(): null {
-  const { servers } = useMcpClient();
+  const { servers, storageLoaded } = useMcpClient() as {
+    servers: ReturnType<typeof useMcpClient>["servers"];
+    storageLoaded?: boolean;
+  };
   const syncedRef = useRef<Map<string, SyncedClientEntry>>(new Map());
 
   // Install standalone client-side interceptor for direct browser requests and ensure telemetry is disabled
@@ -60,6 +66,9 @@ export function ForkStaticClientsSync(): null {
   // Function to register a client with the BFF (fails gracefully in standalone mode)
   const syncToBff = (serverUrl: string, clientId: string, clientSecret: string) => {
     if (!serverUrl || !clientId || !clientSecret) return;
+    if (typeof window !== "undefined" && (window as unknown as { __MCP_PROXY_URL__?: string | null }).__MCP_PROXY_URL__ === null) {
+      return;
+    }
     const syncKey = `${serverUrl}\u0000${clientId}`;
     const existing = syncedRef.current.get(syncKey);
     if (existing && existing.clientSecret === clientSecret) return;
@@ -100,16 +109,6 @@ export function ForkStaticClientsSync(): null {
       // Ignore JSON storage parsing errors
     }
 
-    const forkSecrets = getAllForkOAuthSecrets();
-    const activeServerUrls = new Set(servers.map((s) => s.url).filter(Boolean));
-
-    for (const entry of Object.values(forkSecrets)) {
-      const isKnown = activeServerUrls.has(entry.serverUrl) || Boolean(storedConnections[entry.serverUrl]);
-      if (!isKnown) {
-        removeForkOAuthSecret(entry.serverUrl);
-      }
-    }
-
     for (const server of servers) {
       if (!server.url) continue;
 
@@ -120,29 +119,21 @@ export function ForkStaticClientsSync(): null {
       const storedOAuth = stored?.oauth as
         | { clientId?: string; clientSecret?: string }
         | undefined;
-
-      const hasOAuth = Boolean(
-        memOAuth?.clientSecret ||
-        storedOAuth?.clientSecret ||
-        (memOAuth?.clientId && forkSecrets[server.url]?.clientSecret)
-      );
-
-      if (!hasOAuth) {
-        if (forkSecrets[server.url]) {
-          removeForkOAuthSecret(server.url);
-        }
-        continue;
-      }
+      const existingSecret = getForkOAuthSecret(server.url);
 
       const clientId =
         memOAuth?.clientId ||
         storedOAuth?.clientId ||
-        forkSecrets[server.url]?.clientId;
+        existingSecret?.clientId;
 
       const clientSecret =
         memOAuth?.clientSecret ||
         storedOAuth?.clientSecret ||
-        forkSecrets[server.url]?.clientSecret;
+        existingSecret?.clientSecret;
+
+      if (!clientId || !clientSecret) {
+        continue;
+      }
 
       const connectionMode =
         server.connectionMode || (stored?.connectionMode as string | undefined);
@@ -150,25 +141,24 @@ export function ForkStaticClientsSync(): null {
         connectionMode === "direct" ||
         stored?.connectionType === "Direct";
 
-      if (clientId && clientSecret) {
-        if (isDirect) {
-          toast.warning(
-            `Connection "${server.displayName || server.url}" has a client secret configured, but is in Direct mode. Token requests must go through Proxy mode or direct CORS-compliant token endpoints.`,
-            { id: `direct-mode-secret-${server.id || server.url}` }
-          );
-        }
-
-        saveForkOAuthSecret(server.url, clientId, clientSecret, forkSecrets[server.url]?.persistent ?? false);
-        syncToBff(server.url, clientId, clientSecret);
+      if (isDirect) {
+        toast.warning(
+          `Connection "${server.displayName || server.url}" has a client secret configured, but is in Direct mode. Token requests must go through Proxy mode or direct CORS-compliant token endpoints.`,
+          { id: `direct-mode-secret-${server.id || server.url}` }
+        );
       }
+
+      saveForkOAuthSecret(server.url, clientId, clientSecret, existingSecret?.persistent ?? false);
+      syncToBff(server.url, clientId, clientSecret);
     }
 
+    const activeServerUrls = new Set(servers.map((s) => s.url).filter(Boolean));
     for (const [key, entry] of syncedRef.current.entries()) {
       const isServerStillActive = activeServerUrls.has(entry.serverUrl);
       const stillHasSecret = Boolean(
         servers.find((s) => s.url === entry.serverUrl && (s as unknown as { oauth?: { clientSecret?: string } }).oauth?.clientSecret) ||
         storedConnections[entry.serverUrl]?.oauth ||
-        forkSecrets[entry.serverUrl]
+        getForkOAuthSecret(entry.serverUrl)
       );
 
       if (!isServerStillActive || !stillHasSecret) {
@@ -181,10 +171,12 @@ export function ForkStaticClientsSync(): null {
           }),
         }).catch(() => {});
         syncedRef.current.delete(key);
-        removeForkOAuthSecret(entry.serverUrl);
+        if (!isServerStillActive) {
+          removeForkOAuthSecret(entry.serverUrl);
+        }
       }
     }
-  }, [servers]);
+  }, [servers, storageLoaded]);
 
   // 2. Global DOM listeners to capture typed secrets and mount "Remember 24h" checkbox
   useEffect(() => {
@@ -192,56 +184,81 @@ export function ForkStaticClientsSync(): null {
 
     const findCurrentContext = (
       inputEl: HTMLElement
-    ): { serverUrl: string; clientId: string; remember24h: boolean } => {
+    ): { serverUrl: string; clientId: string; clientSecret: string; remember24h: boolean } => {
       const container =
         inputEl.closest("form") ||
         inputEl.closest('[role="dialog"]') ||
         inputEl.closest(".space-y-4") ||
         document;
 
-      const clientIdEl = container.querySelector(
-        'input[placeholder*="client ID" i], input[placeholder*="Client ID" i]'
-      ) as HTMLInputElement | null;
+      const clientIdEl =
+        (container.querySelector(
+          'input[data-testid="auth-dialog-client-id-input"], input[placeholder*="client ID" i], input[placeholder*="Client ID" i]'
+        ) as HTMLInputElement | null) ||
+        (document.querySelector(
+          'input[data-testid="auth-dialog-client-id-input"], input[placeholder*="client ID" i], input[placeholder*="Client ID" i]'
+        ) as HTMLInputElement | null);
+
+      const secretEl =
+        (container.querySelector(
+          'input[data-testid="auth-dialog-client-secret-input"], input[placeholder*="client secret" i], input[placeholder*="Client Secret" i]'
+        ) as HTMLInputElement | null) ||
+        (document.querySelector(
+          'input[data-testid="auth-dialog-client-secret-input"], input[placeholder*="client secret" i], input[placeholder*="Client Secret" i]'
+        ) as HTMLInputElement | null);
 
       const urlEl =
         (container.querySelector(
           'input[data-testid="connection-form-url-input"], input[placeholder*="localhost" i], input[placeholder*="example.com/mcp" i], input[placeholder*="URL" i]'
         ) as HTMLInputElement | null) ||
         (document.querySelector(
-          'input[data-testid="connection-form-url-input"], input[placeholder*="localhost" i]'
+          'input[data-testid="connection-form-url-input"], input[placeholder*="localhost" i], input[placeholder*="example.com/mcp" i], input[placeholder*="URL" i]'
         ) as HTMLInputElement | null);
 
-      const rememberCheckbox = container.querySelector(
-        'input[data-testid="fork-remember-secret"]'
-      ) as HTMLInputElement | null;
+      const rememberCheckbox =
+        (container.querySelector(
+          'input[data-testid="fork-remember-secret"]'
+        ) as HTMLInputElement | null) ||
+        (document.querySelector(
+          'input[data-testid="fork-remember-secret"]'
+        ) as HTMLInputElement | null);
 
       const params = new URLSearchParams(window.location.search);
       const urlFromQuery = params.get("server") || params.get("autoConnect") || "";
-      const serverUrl = (urlEl?.value || urlFromQuery || "").trim();
+      const serverUrl = (urlEl?.value || urlFromQuery || servers[0]?.url || "").trim();
       const clientId = (
         clientIdEl?.value ||
         (serverUrl ? servers.find((s) => s.url === serverUrl)?.oauth?.clientId : "") ||
         ""
       ).trim();
+      const clientSecret = (secretEl?.value || "").trim();
       const remember24h = rememberCheckbox?.checked ?? false;
 
-      return { serverUrl, clientId, remember24h };
+      return { serverUrl, clientId, clientSecret, remember24h };
     };
 
     const handleSecretInput = (event: Event) => {
       const target = event.target as HTMLInputElement | null;
       if (!target || target.tagName !== "INPUT") return;
 
-      const placeholder = target.getAttribute("placeholder") || "";
-      if (!placeholder.includes("Client secret")) return;
+      const testId = target.getAttribute("data-testid") || "";
+      const placeholder = (target.getAttribute("placeholder") || "").toLowerCase();
+      const isSecretInput =
+        testId === "auth-dialog-client-secret-input" ||
+        placeholder.includes("client secret");
+      const isClientIdInput =
+        testId === "auth-dialog-client-id-input" ||
+        placeholder.includes("client id");
+      const isRememberCheckbox = testId === "fork-remember-secret";
 
-      const clientSecret = target.value.trim();
-      const { serverUrl, clientId, remember24h } = findCurrentContext(target);
+      if (!isSecretInput && !isClientIdInput && !isRememberCheckbox) return;
+
+      const { serverUrl, clientId, clientSecret, remember24h } = findCurrentContext(target);
       if (serverUrl) {
         if (clientSecret && clientId) {
           saveForkOAuthSecret(serverUrl, clientId, clientSecret, remember24h);
           syncToBff(serverUrl, clientId, clientSecret);
-        } else if (!clientSecret) {
+        } else if (isSecretInput && !clientSecret) {
           removeForkOAuthSecret(serverUrl);
         }
       }
@@ -261,18 +278,14 @@ export function ForkStaticClientsSync(): null {
         buttonText.includes("Authenticate")
       ) {
         const secretInputs = document.querySelectorAll(
-          'input[placeholder*="Client secret" i]'
+          'input[data-testid="auth-dialog-client-secret-input"], input[placeholder*="client secret" i]'
         );
         for (const input of Array.from(secretInputs) as HTMLInputElement[]) {
           const secret = input.value.trim();
           const { serverUrl, clientId, remember24h } = findCurrentContext(input);
-          if (serverUrl) {
-            if (secret && clientId) {
-              saveForkOAuthSecret(serverUrl, clientId, secret, remember24h);
-              syncToBff(serverUrl, clientId, secret);
-            } else if (!secret) {
-              removeForkOAuthSecret(serverUrl);
-            }
+          if (serverUrl && secret && clientId) {
+            saveForkOAuthSecret(serverUrl, clientId, secret, remember24h);
+            syncToBff(serverUrl, clientId, secret);
           }
         }
       }
@@ -281,7 +294,7 @@ export function ForkStaticClientsSync(): null {
     // Mount remember checkbox without interfering with controlled React input values
     const checkAndMountRememberCheckbox = () => {
       const secretInputs = document.querySelectorAll(
-        'input[placeholder*="Client secret" i]'
+        'input[data-testid="auth-dialog-client-secret-input"], input[placeholder*="client secret" i]'
       );
       if (secretInputs.length === 0) return;
 
